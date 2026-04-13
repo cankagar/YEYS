@@ -61,17 +61,17 @@ def rapor_goster(solar, wind, load, battery_history, grid_history, wasted_histor
     print(f"{'Yenilenebilir enerjiden kazanç':<30}: {savings:.2f} TL")
 
     # Saatlik detay tablosu
-    print("\n" + "-" * 85)
-    print(f"{'Saat':<5} {'Solar':>7} {'Wind':>7} {'Load':>7} {'Üretim':>7} {'Batarya':>9} {'Grid':>7} {'Toprak':>8} {'Durum':>10}")
-    print("-" * 85)
+    print("\n" + "-" * 96)
+    print(f"{'Saat':<5} {'Solar':>7} {'Wind':>7} {'Üretim':>7} {'Batarya':>9} {'Grid':>7} {'Toprak':>8} {'Durum':>10} {'Tüketim':>9}")
+    print("-" * 96)
 
     for i in range(toplam_saat):
         production = solar[i] + wind[i]
         durum = "BLACKOUT" if blackout_listesi[i] else "OK"
         print(
-            f"{i+1:<5} {solar[i]:>7.2f} {wind[i]:>7.2f} {load[i]:>7.2f} "
-            f"{production:>7.2f} {battery_history[i]:>9.2f} {grid_history[i]:>7.2f} "
-            f"{wasted_history[i]:>8.2f} {durum:>10}"
+            f"{i+1:<5} {solar[i]:>7.2f} {wind[i]:>7.2f} {production:>7.2f} "
+            f"{battery_history[i]:>9.2f} {grid_history[i]:>7.2f} "
+            f"{wasted_history[i]:>8.2f} {durum:>10} {load[i]:>9.2f}"
         )
 
     print("-" * 85)

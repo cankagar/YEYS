@@ -17,8 +17,6 @@ def simulasyon_calistir(solar, wind, load, grid_available, battery, battery_capa
     # Üretim ve denge değerlerini hesapla
     _, denge_listesi = saatlik_hesapla(solar, wind, load)
 
-    print("\nSimülasyon başlıyor...")
-
     # Her saat için simülasyonu adım adım işle
     for i in range(len(solar)):
         balance = denge_listesi[i]
