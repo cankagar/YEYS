@@ -1,26 +1,26 @@
 # GÖREV: BATARYA YÖNETİMİ
 # KİŞİ: BURAK
 
-def batarya_guncelle(battery, balance, battery_capacity):
-    # Eğer denge pozitifse (üretim > tüketim), fazla enerji bataryaya eklenir
-    if balance > 0:
-        battery = battery + balance
+def batarya_doldur(battery, balance, battery_capacity):
+    wasted = 0  # Toprağa atılan fazlalık enerji
 
-        # Batarya kapasitesi aşılırsa maksimuma sabitle
-        if battery > battery_capacity:
-            battery = battery_capacity
+    battery = battery + balance
 
-    return battery
+    # Batarya kapasiteyi aştıysa fazlalık toprağa atılır
+    if battery > battery_capacity:
+        wasted = battery - battery_capacity
+        battery = battery_capacity  # Batarya maksimuma sabitlenir
+
+    return battery, wasted
 
 
 def batarya_bos_et(battery, deficit):
     # Enerji açığını bataryadan karşılamaya çalış
-    # Batarya açığı tam karşılıyorsa düş
     if battery >= deficit:
         battery = battery - deficit
         kalan_acik = 0  # Açık tamamen kapandı
     else:
-        # Batarya yetmiyor, ne kadar kaldıysa kullan, kalan açık hesapla
+        # Batarya yetmiyor, kalan açık hesapla
         kalan_acik = deficit - battery
         battery = 0  # Batarya tamamen boşaldı
 
@@ -28,15 +28,16 @@ def batarya_bos_et(battery, deficit):
 
 
 def batarya_isle(battery, balance, battery_capacity):
-    # Bu fonksiyon hem doldurmayı hem de boşaltmayı yönetir
+    # Denge pozitifse bataryayı doldur, negatifse boşalt
     kalan_acik = 0
+    wasted = 0
 
     if balance >= 0:
-        # Fazla enerji var, bataryayı doldur
-        battery = batarya_guncelle(battery, balance, battery_capacity)
+        # Fazla enerji var → bataryaya ekle, sığmazsa toprağa at
+        battery, wasted = batarya_doldur(battery, balance, battery_capacity)
     else:
-        # Enerji açığı var, deficit pozitif sayı olarak alınır
+        # Enerji açığı var → deficit pozitif sayı olarak alınır
         deficit = abs(balance)
         battery, kalan_acik = batarya_bos_et(battery, deficit)
 
-    return battery, kalan_acik
+    return battery, kalan_acik, wasted

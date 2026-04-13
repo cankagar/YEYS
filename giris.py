@@ -45,8 +45,8 @@ def veri_al():
         except ValueError:
             print("Hata: Lütfen sayısal değerler girin.")
 
-    # Tüketim verilerini kullanıcıdan al
-    print(f"\nTüketim verilerini girin ({saat_sayisi} değer, boşlukla ayırın):")
+    # Her saat için evdeki toplam elektrik tüketimini al
+    print(f"\nSaatlik elektrik tüketimini girin ({saat_sayisi} değer, boşlukla ayırın):")
     while True:
         try:
             load = list(map(float, input("Load (kWh): ").split()))
@@ -59,6 +59,23 @@ def veri_al():
             break
         except ValueError:
             print("Hata: Lütfen sayısal değerler girin.")
+
+    # Her saat için şebeke elektriği var mı? (1 = var, 0 = yok)
+    print(f"\nHer saat için şebeke elektriği durumunu girin ({saat_sayisi} değer, 1=var 0=yok):")
+    while True:
+        try:
+            grid_available_raw = list(map(int, input("Şebeke (1/0): ").split()))
+            if len(grid_available_raw) != saat_sayisi:
+                print(f"Hata: {saat_sayisi} değer girmelisiniz, {len(grid_available_raw)} girdiniz.")
+                continue
+            if any(x not in [0, 1] for x in grid_available_raw):
+                print("Hata: Yalnızca 0 veya 1 girebilirsiniz.")
+                continue
+            # 1 → True, 0 → False olarak dönüştür
+            grid_available = [x == 1 for x in grid_available_raw]
+            break
+        except ValueError:
+            print("Hata: Lütfen 0 veya 1 girin.")
 
     # Batarya kapasitesini al
     while True:
@@ -82,7 +99,7 @@ def veri_al():
         except ValueError:
             print("Hata: Lütfen geçerli bir sayı girin.")
 
-    # Grid limitini al (isteğe bağlı)
+    # Grid limitini al
     while True:
         try:
             grid_limit = float(input("\nGrid limiti (kWh, 0 = limit yok): "))
@@ -97,4 +114,15 @@ def veri_al():
     if grid_limit == 0:
         grid_limit = float('inf')
 
-    return solar, wind, load, battery, battery_capacity, grid_limit
+    # Şebekeden alınan elektriğin kWh birim fiyatını al
+    while True:
+        try:
+            grid_price = float(input("Şebeke elektriği birim fiyatı (TL/kWh): "))
+            if grid_price < 0:
+                print("Hata: Fiyat negatif olamaz.")
+                continue
+            break
+        except ValueError:
+            print("Hata: Lütfen geçerli bir sayı girin.")
+
+    return solar, wind, load, grid_available, battery, battery_capacity, grid_limit, grid_price
