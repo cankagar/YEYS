@@ -200,11 +200,13 @@ def batarya_bos_et(battery, deficit):
 
 def batarya_isle(battery, balance, battery_capacity):
     # Denge pozitifse bataryayı doldur, negatifse boşalt
+    # NOT: Batarya YALNIZCA yenilenebilir enerji fazlasında (balance > 0) dolar.
+    # balance = üretim - tüketim olduğundan, grid buraya dahil değildir.
     kalan_acik = 0
     wasted = 0
 
     if balance >= 0:
-        # Fazla enerji var → bataryaya ekle, sığmazsa toprağa at
+        # Yenilenebilir enerji fazlası var → bataryaya ekle, sığmazsa toprağa at
         battery, wasted = batarya_doldur(battery, balance, battery_capacity)
     else:
         # Enerji açığı var → deficit pozitif sayı olarak alınır
@@ -247,23 +249,24 @@ def grid_kullan(kalan_acik, grid_limit, grid_available):
 # KİŞİ: CAN
 # ===========================================================
 
-def rapor_goster(solar, wind, load, battery_history, grid_history, wasted_history, blackout_listesi, grid_price):
+def rapor_goster(solar, wind, load, battery_baslangic, battery_capacity, battery_history, grid_history, wasted_history, blackout_listesi, grid_price):
 
-    toplam_saat      = len(solar)
-    total_load       = sum(load)
-    total_renewable  = sum(solar) + sum(wind)
-    total_production = total_renewable       # Bu projede tüm üretim yenilenebilir
-    total_grid_used  = sum(grid_history)
-    total_wasted     = sum(wasted_history)   # Toprağa atılan toplam enerji
-    blackout_sayisi  = blackout_listesi.count(True)
+    toplam_saat     = len(solar)
+    total_load      = sum(load)
+    total_grid_used = sum(grid_history)
+    total_wasted    = sum(wasted_history)   # Toprağa atılan toplam enerji
+    blackout_sayisi = blackout_listesi.count(True)
 
-    # Yüzde hesaplamaları
-    if total_load > 0:
-        renewable_ratio = (total_renewable / total_load) * 100
-        grid_ratio      = (total_grid_used / total_load) * 100
-    else:
-        renewable_ratio = 0
-        grid_ratio      = 0
+    # Tüketimin kaynağı: grid dışında kalan her şey yenilenebilir kaynaklıdır
+    renewable_consumed = total_load - total_grid_used
+    if renewable_consumed < 0:
+        renewable_consumed = 0
+
+    # Batarya karşılaştırması
+    battery_son      = battery_history[-1]
+    battery_degisim  = battery_son - battery_baslangic   # + ise doldu, - ise boşaldı
+    battery_son_yuzde = (battery_son / battery_capacity) * 100
+    battery_bas_yuzde = (battery_baslangic / battery_capacity) * 100
 
     # Maliyet hesabı
     # Hiç yenilenebilir kullanmasaydı tüm tüketimi şebekeden alacaktı
@@ -282,12 +285,28 @@ def rapor_goster(solar, wind, load, battery_history, grid_history, wasted_histor
 
     print(f"\n{'Simülasyon süresi':<30}: {toplam_saat} saat")
     print(f"{'Toplam tüketim':<30}: {total_load:.2f} kWh")
-    print(f"{'Toplam üretim (yenilenebilir)':<30}: {total_production:.2f} kWh")
-    print(f"{'Toplam grid kullanımı':<30}: {total_grid_used:.2f} kWh")
     print(f"{'Toprağa atılan enerji':<30}: {total_wasted:.2f} kWh")
 
-    print(f"\n{'Yenilenebilir enerji oranı':<30}: %{renewable_ratio:.1f}")
-    print(f"{'Şebeke enerji oranı':<30}: %{grid_ratio:.1f}")
+    # Tüketimin kaynağı yüzdeleri
+    if total_load > 0:
+        renewable_yuzde = (renewable_consumed / total_load) * 100
+        grid_yuzde      = (total_grid_used / total_load) * 100
+    else:
+        renewable_yuzde = 0
+        grid_yuzde      = 0
+
+    print(f"\n--- Tüketimin Kaynağı ---")
+    print(f"{'  Yenilenebilir kaynaklı':<30}: {renewable_consumed:.2f} kWh  (%{renewable_yuzde:.1f})")
+    print(f"{'  Şebekeden gelen':<30}: {total_grid_used:.2f} kWh  (%{grid_yuzde:.1f})")
+
+    # Batarya karşılaştırması
+    print(f"\n--- Batarya Durumu ---")
+    print(f"{'  Başlangıç seviyesi':<30}: {battery_baslangic:.2f} kWh  (%{battery_bas_yuzde:.1f})")
+    print(f"{'  Son seviye':<30}: {battery_son:.2f} kWh  (%{battery_son_yuzde:.1f})")
+    if battery_degisim >= 0:
+        print(f"{'  Değişim':<30}: +{battery_degisim:.2f} kWh  (doldu)")
+    else:
+        print(f"{'  Değişim':<30}: {battery_degisim:.2f} kWh  (boşaldı)")
 
     print(f"\n{'Kaç kez blackout oldu':<30}: {blackout_sayisi} kez")
     if sistem_stabil:
@@ -363,13 +382,16 @@ def main():
     # 1. Kullanıcıdan verileri al
     solar, wind, load, grid_available, battery, battery_capacity, grid_limit, grid_price = veri_al()
 
+    # Başlangıç batarya seviyesini rapor için saklıyoruz (simülasyon battery'yi değiştirir)
+    battery_baslangic = battery
+
     # 2. Simülasyonu çalıştır
     battery_history, grid_history, wasted_history, blackout_listesi = simulasyon_calistir(
         solar, wind, load, grid_available, battery, battery_capacity, grid_limit
     )
 
     # 3. Sonuçları raporla
-    rapor_goster(solar, wind, load, battery_history, grid_history, wasted_history, blackout_listesi, grid_price)
+    rapor_goster(solar, wind, load, battery_baslangic, battery_capacity, battery_history, grid_history, wasted_history, blackout_listesi, grid_price)
 
 
 # Programı başlat
