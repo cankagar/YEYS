@@ -4,8 +4,8 @@ import random
 # SİSTEM SABİTLERİ
 # ==============================================================
 BATARYA_KAPASITESI = 10.0
-SISTEM_MALIYETI    = 420_000
-GRID_FIYATI        = 5
+SISTEM_MALIYETI    = 400_000
+GRID_FIYATI        = 5.5
 SATIS_FIYATI       = 1.10
 SISTEM_OMRU        = 30
 PANEL_SAYISI       = 12
