@@ -6,6 +6,7 @@ import random
 BATARYA_KAPASITESI = 10.0
 SISTEM_MALIYETI    = 420_000
 GRID_FIYATI        = 5
+SATIS_FIYATI       = 1.10
 SISTEM_OMRU        = 30
 PANEL_SAYISI       = 12
 DOGU_SEHIRLER      = {"VAN", "ŞANLIURFA"}
@@ -299,14 +300,25 @@ def veri_al():
         except ValueError:
             print("  Hata: Geçerli bir sayı girin.")
 
-    return sehir, gun, tuketim, batarya_yuzde
+    while True:
+        secim = input(
+            f"\nFazla enerjiyi şebekeye satmak ister misiniz?"
+            f"\n  ({SATIS_FIYATI:.2f} TL/kWh satış fiyatı)"
+            f"\n  [E] Evet, sat  /  [H] Hayır, toprağa ver: "
+        ).strip().upper()
+        if secim in ("E", "H"):
+            satis_yap = secim == "E"
+            break
+        print("  Hata: E veya H girin.")
+
+    return sehir, gun, tuketim, batarya_yuzde, satis_yap
 
 
 # ==============================================================
 # BÖLÜM 3: ÜRETİM HESAPLAMA
 # ==============================================================
 def uretim_hesapla(sehir, gun):
-    ges_ort, ges_alt, ges_ust, res_ort, res_alt, res_ust = URETIM_VERILERI[sehir][gun]
+    ges_ort, _, _, res_ort, _, _ = URETIM_VERILERI[sehir][gun]
 
     overheat_panel_sayisi = 0
 
@@ -382,8 +394,7 @@ def kesinti_simulasyonu(tuketim, toplam_uretim, batarya_mevcut):
 # ==============================================================
 # BÖLÜM 6: SENARYO BELİRLEME
 # ==============================================================
-def senaryo_belirle(toplam_uretim, tuketim, topraga_atilan, grid_kullanim,
-                    batarya_bas, batarya_son, blackout_saat):
+def senaryo_belirle(toplam_uretim, tuketim, topraga_atilan, grid_kullanim, blackout_saat):
     denge = toplam_uretim - tuketim
 
     if denge >= 0 and topraga_atilan > 0:
@@ -403,25 +414,27 @@ def senaryo_belirle(toplam_uretim, tuketim, topraga_atilan, grid_kullanim,
 # ==============================================================
 # BÖLÜM 7: EKONOMİK ANALİZ
 # ==============================================================
-def ekonomik_analiz(tuketim, grid_kullanim):
+def ekonomik_analiz(tuketim, grid_kullanim, fazla_enerji, satis_yap):
     fatura_sistemsiz  = round(tuketim * GRID_FIYATI, 2)
     fatura_sistemli   = round(grid_kullanim * GRID_FIYATI, 2)
-    gunluk_tasarruf   = round(fatura_sistemsiz - fatura_sistemli, 2)
-    aylik_tasarruf    = round(gunluk_tasarruf * 31, 2)   # Mayıs = 31 gün
+    satis_geliri      = round(fazla_enerji * SATIS_FIYATI, 2) if satis_yap else 0.0
+    # Günlük net kazanç: fatura tasarrufu + varsa satış geliri
+    gunluk_kazanc     = round(fatura_sistemsiz - fatura_sistemli + satis_geliri, 2)
+    aylik_kazanc      = round(gunluk_kazanc * 31, 2)
     aylik_fatura_yeys = round(fatura_sistemli * 31, 2)
     aylik_fatura_yok  = round(fatura_sistemsiz * 31, 2)
-    yillik_tasarruf   = round(gunluk_tasarruf * 365, 2)
+    yillik_kazanc     = round(gunluk_kazanc * 365, 2)
 
-    if yillik_tasarruf > 0:
-        amortisman_yil   = round(SISTEM_MALIYETI / yillik_tasarruf, 1)
-        omur_boyu_kazanc = round(yillik_tasarruf * SISTEM_OMRU - SISTEM_MALIYETI, 2)
+    if yillik_kazanc > 0:
+        amortisman_yil   = round(SISTEM_MALIYETI / yillik_kazanc, 1)
+        omur_boyu_kazanc = round(yillik_kazanc * SISTEM_OMRU - SISTEM_MALIYETI, 2)
     else:
         amortisman_yil   = None
         omur_boyu_kazanc = round(-SISTEM_MALIYETI, 2)
 
-    return (fatura_sistemsiz, fatura_sistemli, gunluk_tasarruf,
-            aylik_fatura_yok, aylik_fatura_yeys, aylik_tasarruf,
-            yillik_tasarruf, amortisman_yil, omur_boyu_kazanc)
+    return (fatura_sistemsiz, fatura_sistemli, satis_geliri, gunluk_kazanc,
+            aylik_fatura_yok, aylik_fatura_yeys, aylik_kazanc,
+            yillik_kazanc, amortisman_yil, omur_boyu_kazanc)
 
 
 # ==============================================================
@@ -437,11 +450,11 @@ SENARYO_METINLERI = {
 
 
 def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
-                 ges, res, toplam_uretim, grid_kullanim, topraga_atilan,
+                 ges, res, toplam_uretim, grid_kullanim, fazla_enerji, satis_yap,
                  overheat_panel, kesinti_suresi, kurtarilan_saat, blackout_saat,
-                 fatura_sistemsiz, fatura_sistemli, gunluk_tasarruf,
-                 aylik_fatura_yok, aylik_fatura_yeys, aylik_tasarruf,
-                 yillik_tasarruf, amortisman_yil, omur_boyu_kazanc, senaryo_no):
+                 fatura_sistemsiz, fatura_sistemli, satis_geliri, gunluk_kazanc,
+                 aylik_fatura_yok, aylik_fatura_yeys, aylik_kazanc,
+                 yillik_kazanc, amortisman_yil, omur_boyu_kazanc, senaryo_no):
 
     denge          = round(toplam_uretim - tuketim, 3)
     batarya_degisim = round(batarya_son - batarya_bas, 3)
@@ -484,7 +497,10 @@ def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
 
     print("\n--- ENERJİ AKIŞI " + "-" * 47)
     print(f"  Şebekeden Çekilen        : {grid_kullanim:.2f} kWh")
-    print(f"  Toprağa Atılan (Fazla)   : {topraga_atilan:.2f} kWh")
+    if satis_yap:
+        print(f"  Şebekeye Satılan (Fazla) : {fazla_enerji:.2f} kWh  ({fazla_enerji * SATIS_FIYATI:.2f} TL gelir)")
+    else:
+        print(f"  Toprağa Atılan (Fazla)   : {fazla_enerji:.2f} kWh")
 
     print("\n--- KESİNTİ SİMÜLASYONU " + "-" * 40)
     if kesinti_suresi == 0:
@@ -508,13 +524,17 @@ def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
     print("\n" + "-" * 65)
     print("  MALİYET ANALİZİ")
     print("-" * 65)
-    print(f"  Şebeke Birim Fiyatı      : {GRID_FIYATI:.2f} TL/kWh")
+    print(f"  Şebeke Alış Fiyatı       : {GRID_FIYATI:.2f} TL/kWh")
+    if satis_yap:
+        print(f"  Şebekeye Satış Fiyatı    : {SATIS_FIYATI:.2f} TL/kWh")
     print(f"  YEYS olmadan fatura      : {fatura_sistemsiz:.2f} TL/gün")
     print(f"  YEYS ile fatura          : {fatura_sistemli:.2f} TL/gün")
+    if satis_yap and satis_geliri > 0:
+        print(f"  Satış Geliri             : +{satis_geliri:.2f} TL/gün")
 
     print("\n--- YATIRIM ANALİZİ " + "-" * 44)
     print(f"  Sistem Kurulum Maliyeti  : {SISTEM_MALIYETI:,} TL")
-    print(f"  Tahmini Yıllık Tasarruf  : {yillik_tasarruf:,.2f} TL")
+    print(f"  Tahmini Yıllık Kazanç    : {yillik_kazanc:,.2f} TL")
     if amortisman_yil is not None:
         print(f"  Amortisman Süresi        : {amortisman_yil:.1f} yıl")
         print(f"  Sistem Ömrü              : {SISTEM_OMRU} yıl")
@@ -523,31 +543,33 @@ def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
         else:
             print(f"  Ömür Boyu Net Kazanç     : {omur_boyu_kazanc:,.2f} TL  (zarar)")
     else:
-        print("  Amortisman Süresi        : Hesaplanamadi (tasarruf yok)")
+        print("  Amortisman Süresi        : Hesaplanamadi (kazanç yok)")
 
     # --- KAR / ZARAR ÖZETİ ---
     print("\n" + "=" * 65)
-    print("  FATURA KAR / ZARAR ÖZETİ  (YEYS kullanarak ne kadar kazandın?)")
+    print("  FATURA KAR / ZARAR ÖZETİ")
     print("=" * 65)
 
-    print(f"\n  {'':5}{'YEYS OLMADAN':>18}{'YEYS İLE':>18}{'FARK (KAZANÇ)':>18}")
+    gunluk_isaretli = f"+{gunluk_kazanc:.2f} TL" if gunluk_kazanc >= 0 else f"{gunluk_kazanc:.2f} TL"
+    aylik_isaretli  = f"+{aylik_kazanc:.2f} TL"  if aylik_kazanc  >= 0 else f"{aylik_kazanc:.2f} TL"
+
+    print(f"\n  {'':5}{'YEYS OLMADAN':>18}{'YEYS İLE':>18}{'NET KAZANÇ':>18}")
     print(f"  {'-'*59}")
-
-    gunluk_isaretli = f"+{gunluk_tasarruf:.2f} TL" if gunluk_tasarruf >= 0 else f"{gunluk_tasarruf:.2f} TL"
-    aylik_isaretli  = f"+{aylik_tasarruf:.2f} TL"  if aylik_tasarruf  >= 0 else f"{aylik_tasarruf:.2f} TL"
-
     print(f"  {'Günlük':<8}{fatura_sistemsiz:>14.2f} TL{fatura_sistemli:>14.2f} TL{gunluk_isaretli:>18}")
     print(f"  {'Aylık':<8}{aylik_fatura_yok:>14.2f} TL{aylik_fatura_yeys:>14.2f} TL{aylik_isaretli:>18}")
     print(f"  {'-'*59}")
 
-    if gunluk_tasarruf > 0:
-        print(f"\n  Bu gun YEYS sayesinde {gunluk_tasarruf:.2f} TL daha az fatura odedin.")
-        print(f"  Tum Mayis ayi icin bu tasarrufu surerdin:")
-        print(f"  Aylik toplam kazanc: {aylik_tasarruf:.2f} TL")
-    elif gunluk_tasarruf == 0:
-        print(f"\n  Bugun tum enerji sebekeden karsilandi; YEYS etkisi yok.")
+    if satis_yap and satis_geliri > 0:
+        print(f"\n  * Günlük kazanca {satis_geliri:.2f} TL satış geliri dahildir.")
+
+    if gunluk_kazanc > 0:
+        print(f"\n  Bugün YEYS sayesinde toplam {gunluk_kazanc:.2f} TL kazandın.")
+        print(f"  Tüm Mayıs ayı boyunca bu kazancı sürdürseydin:")
+        print(f"  Aylık toplam kazanç: {aylik_kazanc:.2f} TL")
+    elif gunluk_kazanc == 0:
+        print(f"\n  Bugün tüm enerji şebekeden karşılandı; YEYS etkisi yok.")
     else:
-        print(f"\n  Bugun ek sebeke kullanimi nedeniyle {abs(gunluk_tasarruf):.2f} TL ekstra odendi.")
+        print(f"\n  Bugün ek şebeke kullanımı nedeniyle {abs(gunluk_kazanc):.2f} TL ekstra ödendi.")
 
     print("=" * 65)
 
@@ -556,7 +578,7 @@ def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
 # ANA AKIŞ
 # ==============================================================
 def main():
-    sehir, gun, tuketim, batarya_yuzde = veri_al()
+    sehir, gun, tuketim, batarya_yuzde, satis_yap = veri_al()
 
     batarya_bas = round(BATARYA_KAPASITESI * batarya_yuzde / 100, 2)
 
@@ -565,7 +587,7 @@ def main():
     toplam_uretim = round(ges + res, 2)
 
     # Enerji dengesi
-    batarya_son, grid_kullanim, topraga_atilan, _ = enerji_dengesi_hesapla(
+    batarya_son, grid_kullanim, fazla_enerji, _ = enerji_dengesi_hesapla(
         ges, res, tuketim, batarya_bas
     )
 
@@ -576,23 +598,24 @@ def main():
 
     # Senaryo belirleme
     senaryo_no = senaryo_belirle(
-        toplam_uretim, tuketim, topraga_atilan,
-        grid_kullanim, batarya_bas, batarya_son, blackout_saat
+        toplam_uretim, tuketim, fazla_enerji, grid_kullanim, blackout_saat
     )
 
     # Ekonomik analiz
-    (fatura_sistemsiz, fatura_sistemli, gunluk_tasarruf,
-     aylik_fatura_yok, aylik_fatura_yeys, aylik_tasarruf,
-     yillik_tasarruf, amortisman_yil, omur_boyu_kazanc) = ekonomik_analiz(tuketim, grid_kullanim)
+    (fatura_sistemsiz, fatura_sistemli, satis_geliri, gunluk_kazanc,
+     aylik_fatura_yok, aylik_fatura_yeys, aylik_kazanc,
+     yillik_kazanc, amortisman_yil, omur_boyu_kazanc) = ekonomik_analiz(
+        tuketim, grid_kullanim, fazla_enerji, satis_yap
+    )
 
     # Rapor
     rapor_goster(
         sehir, gun, tuketim, batarya_bas, batarya_son,
-        ges, res, toplam_uretim, grid_kullanim, topraga_atilan,
+        ges, res, toplam_uretim, grid_kullanim, fazla_enerji, satis_yap,
         overheat_panel, kesinti_suresi, kurtarilan_saat, blackout_saat,
-        fatura_sistemsiz, fatura_sistemli, gunluk_tasarruf,
-        aylik_fatura_yok, aylik_fatura_yeys, aylik_tasarruf,
-        yillik_tasarruf, amortisman_yil, omur_boyu_kazanc, senaryo_no
+        fatura_sistemsiz, fatura_sistemli, satis_geliri, gunluk_kazanc,
+        aylik_fatura_yok, aylik_fatura_yeys, aylik_kazanc,
+        yillik_kazanc, amortisman_yil, omur_boyu_kazanc, senaryo_no
     )
 
 
