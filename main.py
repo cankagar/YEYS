@@ -3,11 +3,11 @@ import random
 # ==============================================================
 # SİSTEM SABİTLERİ
 # ==============================================================
-BATARYA_KAPASITESI = 20.0
-SISTEM_MALIYETI    = 1_000_000
-GRID_FIYATI        = 2.45
-SISTEM_OMRU        = 20
-PANEL_SAYISI       = 6
+BATARYA_KAPASITESI = 10.0
+SISTEM_MALIYETI    = 420_000
+GRID_FIYATI        = 5
+SISTEM_OMRU        = 30
+PANEL_SAYISI       = 12
 DOGU_SEHIRLER      = {"VAN", "ŞANLIURFA"}
 
 # ==============================================================
