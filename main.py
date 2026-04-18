@@ -440,13 +440,16 @@ def ekonomik_analiz(tuketim, grid_kullanim, fazla_enerji, satis_yap):
 # ==============================================================
 # BÖLÜM 8: RAPOR
 # ==============================================================
-SENARYO_METINLERI = {
-    1: "Uretim tüketimi karşıladı. Batarya doldu. Fazla enerji toprağa verildi.",
-    2: "Uretim yetersiz kaldı. Batarya kullanıldı, bitti. Açık şebekeden sağlandı.",
-    3: "Uretim yetersiz. Batarya bitti. Şebeke karşılayamadı. BLACKOUT oluştu.",
-    4: "Uretim tüketimi karşıladı. Kalan enerji bataryaya verildi.",
-    5: "Uretim yetersiz. Grid devreye girdi. Kesinti sırasında BLACKOUT oluştu.",
-}
+def senaryo_metni(senaryo_no, satis_yap):
+    fazla_hedef = "şebekeye satıldı" if satis_yap else "toprağa verildi"
+    metinler = {
+        1: f"Üretim tüketimi karşıladı. Batarya doldu. Fazla enerji {fazla_hedef}.",
+        2: "Üretim yetersiz kaldı. Batarya kullanıldı, bitti. Açık şebekeden sağlandı.",
+        3: "Üretim yetersiz. Batarya bitti. Şebeke karşılayamadı. BLACKOUT oluştu.",
+        4: "Üretim tüketimi karşıladı. Kalan enerji bataryaya verildi.",
+        5: "Üretim yetersiz. Grid devreye girdi. Kesinti sırasında BLACKOUT oluştu.",
+    }
+    return metinler.get(senaryo_no, "")
 
 
 def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
@@ -519,7 +522,7 @@ def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
             print(f"  Kalan {blackout_saat:.1f} saatlik sürede batarya tükendi: BLACKOUT.")
 
     print(f"\n--- SENARYO {senaryo_no} " + "-" * 52)
-    print(f"  {SENARYO_METINLERI.get(senaryo_no, '')}")
+    print(f"  {senaryo_metni(senaryo_no, satis_yap)}")
 
     print("\n" + "-" * 65)
     print("  MALİYET ANALİZİ")
