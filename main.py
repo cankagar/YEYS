@@ -1,398 +1,599 @@
-# ANA PROGRAM - Tüm modülleri birleştirir ve simülasyonu çalıştırır
+import random
 
+# ==============================================================
+# SİSTEM SABİTLERİ
+# ==============================================================
+BATARYA_KAPASITESI = 10.0
+SISTEM_MALIYETI    = 180_000
+GRID_FIYATI        = 4.5
+SISTEM_OMRU        = 20
+PANEL_SAYISI       = 6
+DOGU_SEHIRLER      = {"VAN", "ŞANLIURFA"}
 
-# ===========================================================
-# BÖLÜM 1: GİRİŞ SİSTEMİ (INPUT & VERİ YÖNETİMİ)
-# KİŞİ: TALHA
-# ===========================================================
+# ==============================================================
+# BÖLÜM 1: VERİ TABLOSU
+# (GES_ort, GES_alt, GES_ust, RES_ort, RES_alt, RES_ust) kWh/gün
+# ==============================================================
+URETIM_VERILERI = {
+    "İSTANBUL": {
+        1:  (16.56,13.25,19.87,5.52,4.42,6.62),
+        2:  (16.89,13.51,20.27,5.52,4.42,6.62),
+        3:  (17.22,13.78,20.66,4.32,3.28,5.36),
+        4:  (17.55,14.04,21.06,6.24,4.99,7.49),
+        5:  (17.88,14.30,21.46,6.24,4.99,7.49),
+        6:  (18.21,14.57,21.85,6.24,4.99,7.49),
+        7:  (18.54,14.83,22.25,6.24,4.99,7.49),
+        8:  (18.87,15.10,22.44,6.24,4.99,7.49),
+        9:  (19.20,15.36,22.99,6.24,4.99,7.49),
+        10: (19.53,15.62,23.44,6.24,4.99,7.49),
+        11: (19.86,15.89,23.83,5.52,4.42,6.62),
+        12: (20.19,16.15,24.23,6.24,4.99,7.49),
+        13: (20.52,16.42,24.62,6.24,4.99,7.49),
+        14: (20.85,16.68,25.02,5.52,4.42,6.62),
+        15: (21.18,16.94,25.42,5.52,4.42,6.62),
+        16: (21.51,17.21,25.81,4.32,3.28,5.36),
+        17: (21.84,17.47,26.21,5.52,4.42,6.62),
+        18: (22.17,17.74,26.60,5.52,4.42,6.62),
+        19: (22.50,18.00,27.00,6.24,4.99,7.49),
+        20: (22.83,18.26,27.40,5.52,4.42,6.62),
+        21: (23.16,18.53,27.79,5.52,4.42,6.62),
+        22: (23.49,18.79,28.19,5.52,4.42,6.62),
+        23: (23.82,19.06,28.58,5.52,4.42,6.62),
+        24: (24.15,19.32,28.98,5.52,4.42,6.62),
+        25: (24.48,19.58,29.38,5.52,4.42,6.62),
+        26: (24.81,19.85,29.77,6.24,4.99,7.49),
+        27: (25.14,20.11,30.17,5.52,4.42,6.62),
+        28: (25.47,20.38,30.56,5.52,4.42,6.62),
+        29: (25.80,20.64,30.96,6.24,4.99,7.49),
+        30: (26.13,20.90,31.36,4.32,3.28,5.36),
+        31: (26.46,21.17,31.75,5.52,4.42,6.62),
+    },
+    "İZMİR": {
+        1:  (20.19,16.15,24.23,2.64,1.72,3.56),
+        2:  (20.52,16.42,24.62,1.92,1.15,2.69),
+        3:  (20.85,16.68,25.02,2.64,1.72,3.56),
+        4:  (21.18,16.94,25.42,2.64,1.72,3.56),
+        5:  (21.51,17.21,25.81,3.48,2.44,4.52),
+        6:  (21.84,17.47,26.21,3.48,2.44,4.52),
+        7:  (22.17,17.74,26.60,3.48,2.44,4.52),
+        8:  (22.50,18.00,27.00,2.64,1.72,3.56),
+        9:  (22.83,18.26,27.40,3.00,2.10,3.90),
+        10: (23.16,18.53,27.79,2.64,1.72,3.56),
+        11: (23.49,18.79,28.19,2.64,1.72,3.56),
+        12: (23.82,19.06,28.58,3.00,2.10,3.90),
+        13: (24.15,19.32,28.98,3.00,2.10,3.90),
+        14: (24.48,19.58,29.38,3.00,2.10,3.90),
+        15: (24.81,19.85,29.77,3.00,2.10,3.90),
+        16: (25.14,20.11,30.17,2.64,1.72,3.56),
+        17: (25.47,20.38,30.56,1.92,1.15,2.69),
+        18: (25.80,20.64,30.96,1.92,1.15,2.69),
+        19: (26.13,20.90,31.36,2.64,1.72,3.56),
+        20: (26.46,21.17,31.75,2.64,1.72,3.56),
+        21: (26.79,21.43,32.15,2.64,1.72,3.56),
+        22: (27.12,21.70,32.54,3.00,2.10,3.90),
+        23: (27.45,21.96,32.94,3.00,2.10,3.90),
+        24: (27.78,22.22,33.34,3.00,2.10,3.90),
+        25: (28.11,22.49,33.73,2.64,1.72,3.56),
+        26: (28.44,22.75,34.13,3.00,2.10,3.90),
+        27: (28.77,23.02,34.52,2.64,1.72,3.56),
+        28: (29.10,23.28,34.92,2.64,1.72,3.56),
+        29: (29.43,23.54,35.32,3.00,2.10,3.90),
+        30: (29.76,23.81,35.71,2.64,1.72,3.56),
+        31: (30.09,24.07,36.11,3.00,2.10,3.90),
+    },
+    "ANTALYA": {
+        1:  (23.49,18.79,28.19,1.08,0.54,1.62),
+        2:  (23.82,19.06,28.58,0.84,0.42,1.26),
+        3:  (24.15,19.32,28.98,1.08,0.54,1.62),
+        4:  (24.48,19.58,29.38,1.08,0.54,1.62),
+        5:  (24.81,19.85,29.77,0.84,0.42,1.26),
+        6:  (25.14,20.11,30.17,1.08,0.54,1.62),
+        7:  (25.47,20.38,30.56,1.08,0.54,1.62),
+        8:  (25.80,20.64,30.96,0.84,0.42,1.26),
+        9:  (26.13,20.90,31.36,1.08,0.54,1.62),
+        10: (26.46,21.17,31.75,1.08,0.54,1.62),
+        11: (26.79,21.43,32.15,0.84,0.42,1.26),
+        12: (27.12,21.70,32.54,0.84,0.42,1.26),
+        13: (27.45,21.96,32.94,0.84,0.42,1.26),
+        14: (27.78,22.22,33.34,1.08,0.54,1.62),
+        15: (28.11,22.49,33.73,1.08,0.54,1.62),
+        16: (28.44,22.75,34.13,1.08,0.54,1.62),
+        17: (28.77,23.02,34.52,1.08,0.54,1.62),
+        18: (29.10,23.28,34.92,1.08,0.54,1.62),
+        19: (29.43,23.54,35.32,1.08,0.54,1.62),
+        20: (29.76,23.81,35.71,1.08,0.54,1.62),
+        21: (30.09,24.07,36.11,1.08,0.54,1.62),
+        22: (30.42,24.34,36.50,1.08,0.54,1.62),
+        23: (30.75,24.60,36.90,1.08,0.54,1.62),
+        24: (31.08,24.86,37.30,1.32,0.66,1.98),
+        25: (31.41,25.13,37.69,1.08,0.54,1.62),
+        26: (31.74,25.39,38.09,1.32,0.66,1.98),
+        27: (32.07,25.66,38.48,1.08,0.54,1.62),
+        28: (32.40,25.92,38.88,1.08,0.54,1.62),
+        29: (32.73,26.18,39.28,1.08,0.54,1.62),
+        30: (33.06,26.45,39.67,0.84,0.42,1.26),
+        31: (33.39,26.71,40.07,0.84,0.42,1.26),
+    },
+    "ANKARA": {
+        1:  (19.86,15.89,23.83,2.64,1.72,3.56),
+        2:  (20.19,16.15,24.23,2.64,1.72,3.56),
+        3:  (20.52,16.42,24.62,2.64,1.72,3.56),
+        4:  (20.85,16.68,25.02,2.64,1.72,3.56),
+        5:  (21.18,16.94,25.42,2.64,1.72,3.56),
+        6:  (21.51,17.21,25.81,3.00,2.10,3.90),
+        7:  (21.84,17.47,26.21,3.00,2.10,3.90),
+        8:  (22.17,17.74,26.60,3.00,2.10,3.90),
+        9:  (22.50,18.00,27.00,2.64,1.72,3.56),
+        10: (22.83,18.26,27.40,2.64,1.72,3.56),
+        11: (23.16,18.53,27.79,1.68,1.01,2.35),
+        12: (23.49,18.79,28.19,2.64,1.72,3.56),
+        13: (23.82,19.06,28.58,2.64,1.72,3.56),
+        14: (24.15,19.32,28.98,2.64,1.72,3.56),
+        15: (24.48,19.58,29.38,2.64,1.72,3.56),
+        16: (24.81,19.85,29.77,2.64,1.72,3.56),
+        17: (25.14,20.11,30.17,2.64,1.72,3.56),
+        18: (25.47,20.38,30.56,3.00,2.10,3.90),
+        19: (25.80,20.64,30.96,2.64,1.72,3.56),
+        20: (26.13,20.90,31.36,2.64,1.72,3.56),
+        21: (26.46,21.17,31.75,2.64,1.72,3.56),
+        22: (26.79,21.43,32.15,2.64,1.72,3.56),
+        23: (27.12,21.70,32.54,3.00,2.10,3.90),
+        24: (27.45,21.96,32.94,3.00,2.10,3.90),
+        25: (27.78,22.22,33.34,1.92,1.15,2.69),
+        26: (28.11,22.49,33.73,2.64,1.72,3.56),
+        27: (28.44,22.75,34.13,1.92,1.15,2.69),
+        28: (28.77,23.02,34.52,2.64,1.72,3.56),
+        29: (29.10,23.28,34.92,2.64,1.72,3.56),
+        30: (29.43,23.54,35.32,2.64,1.72,3.56),
+        31: (29.76,23.81,35.71,3.00,2.10,3.90),
+    },
+    "SAMSUN": {
+        1:  (15.24,12.19,18.29,3.48,2.44,4.52),
+        2:  (15.57,12.46,18.68,5.52,4.42,6.62),
+        3:  (15.90,12.72,19.08,5.52,4.42,6.62),
+        4:  (16.23,12.98,19.48,4.32,3.28,5.36),
+        5:  (16.56,13.25,19.87,5.52,4.42,6.62),
+        6:  (16.89,13.51,20.27,5.52,4.42,6.62),
+        7:  (17.22,13.78,19.08,5.52,4.42,6.62),
+        8:  (17.55,14.04,21.06,4.32,3.28,5.36),
+        9:  (17.88,14.30,21.46,4.32,3.28,5.36),
+        10: (18.21,14.57,21.85,5.52,4.42,6.62),
+        11: (18.54,14.83,22.25,3.00,2.10,3.90),
+        12: (18.87,15.10,22.44,3.48,2.44,4.52),
+        13: (19.20,15.36,22.99,4.32,3.28,5.36),
+        14: (19.53,15.62,23.44,5.52,4.42,6.62),
+        15: (19.86,15.89,23.83,5.52,4.42,6.62),
+        16: (20.19,16.15,24.23,6.24,4.99,7.49),
+        17: (20.52,16.42,24.62,3.48,2.44,4.52),
+        18: (20.85,16.68,25.02,6.24,4.99,7.49),
+        19: (21.18,16.94,25.42,4.32,3.28,5.36),
+        20: (21.51,17.21,25.81,4.32,3.28,5.36),
+        21: (21.84,17.47,26.21,4.32,3.28,5.36),
+        22: (22.17,17.74,26.60,5.52,4.42,6.62),
+        23: (22.50,18.00,27.00,5.52,4.42,6.62),
+        24: (22.83,18.26,27.40,4.32,3.28,5.36),
+        25: (23.16,18.53,27.79,4.32,3.28,5.36),
+        26: (23.49,18.79,28.19,3.48,2.44,4.52),
+        27: (23.82,19.06,28.58,6.24,4.99,7.49),
+        28: (24.15,19.32,28.98,4.32,3.28,5.36),
+        29: (24.48,19.58,29.38,5.52,4.42,6.62),
+        30: (24.81,19.85,29.77,3.48,2.44,4.52),
+        31: (25.14,20.11,30.17,3.48,2.44,4.52),
+    },
+    "VAN": {
+        1:  (20.85,16.68,25.02,1.32,0.66,1.98),
+        2:  (21.18,16.94,25.42,1.68,1.01,2.35),
+        3:  (21.51,17.21,25.81,1.92,1.15,2.69),
+        4:  (21.84,17.47,26.21,1.68,1.01,2.35),
+        5:  (22.17,17.74,26.60,1.68,1.01,2.35),
+        6:  (22.50,18.00,27.00,1.68,1.01,2.35),
+        7:  (22.83,18.26,27.40,1.68,1.01,2.35),
+        8:  (23.16,18.53,27.79,1.68,1.01,2.35),
+        9:  (23.49,18.79,28.19,1.68,1.01,2.35),
+        10: (23.82,19.06,28.58,1.68,1.01,2.35),
+        11: (24.15,19.32,28.98,1.68,1.01,2.35),
+        12: (24.48,19.58,29.38,1.68,1.01,2.35),
+        13: (24.81,19.85,29.77,1.92,1.15,2.69),
+        14: (25.14,20.11,30.17,1.68,1.01,2.35),
+        15: (25.47,20.38,30.56,1.68,1.01,2.35),
+        16: (25.80,20.64,30.96,1.68,1.01,2.35),
+        17: (26.13,20.90,31.36,1.92,1.15,2.69),
+        18: (26.46,21.17,31.75,2.64,1.72,3.56),
+        19: (26.79,21.43,32.15,1.92,1.15,2.69),
+        20: (27.12,21.70,32.54,1.68,1.01,2.35),
+        21: (27.45,21.96,32.94,1.32,0.66,1.98),
+        22: (27.78,22.22,33.34,1.68,1.01,2.35),
+        23: (28.11,22.49,33.73,2.64,1.72,3.56),
+        24: (28.44,22.75,34.13,2.64,1.72,3.56),
+        25: (28.77,23.02,34.52,2.64,1.72,3.56),
+        26: (29.10,23.28,34.92,2.64,1.72,3.56),
+        27: (29.43,23.54,35.32,1.68,1.01,2.35),
+        28: (29.76,23.81,35.71,3.00,2.10,3.90),
+        29: (30.09,24.07,36.11,1.92,1.15,2.69),
+        30: (30.42,24.34,36.50,1.68,1.01,2.35),
+        31: (30.75,24.60,36.90,1.92,1.15,2.69),
+    },
+    "ŞANLIURFA": {
+        1:  (25.14,20.11,30.17,3.48,2.44,4.52),
+        2:  (25.47,20.38,30.56,3.48,2.44,4.52),
+        3:  (25.80,20.64,30.96,3.48,2.44,4.52),
+        4:  (26.13,20.90,31.36,3.48,2.44,4.52),
+        5:  (26.46,21.17,31.75,3.48,2.44,4.52),
+        6:  (26.79,21.43,32.15,3.48,2.44,4.52),
+        7:  (27.12,21.70,32.54,3.48,2.44,4.52),
+        8:  (27.45,21.96,32.94,3.00,2.10,3.90),
+        9:  (27.78,22.22,33.34,3.00,2.10,3.90),
+        10: (28.11,22.49,33.73,3.00,2.10,3.90),
+        11: (28.44,22.75,34.13,3.48,2.44,4.52),
+        12: (28.77,23.02,34.52,3.48,2.44,4.52),
+        13: (29.10,23.28,34.92,5.52,4.42,6.62),
+        14: (29.43,23.54,35.32,4.32,3.28,5.36),
+        15: (29.76,23.81,35.71,4.32,3.28,5.36),
+        16: (30.09,24.07,36.11,3.48,2.44,4.52),
+        17: (30.42,24.34,36.50,4.32,3.28,5.36),
+        18: (30.75,24.60,36.90,6.24,4.99,7.49),
+        19: (31.08,24.86,37.30,5.52,4.42,6.62),
+        20: (31.41,25.13,37.69,3.48,2.44,4.52),
+        21: (31.74,25.39,38.09,4.32,3.28,5.36),
+        22: (32.07,25.66,38.48,5.52,4.42,6.62),
+        23: (32.40,25.92,38.88,6.24,4.99,7.49),
+        24: (32.73,26.18,39.28,6.24,4.99,7.49),
+        25: (33.06,26.45,39.67,6.24,4.99,7.49),
+        26: (33.39,26.71,40.07,3.48,2.44,4.52),
+        27: (33.72,26.98,40.46,6.24,4.99,7.49),
+        28: (34.05,27.24,40.86,6.84,5.47,8.21),
+        29: (34.38,27.50,41.26,6.24,4.99,7.49),
+        30: (34.71,27.77,41.65,5.52,4.42,6.62),
+        31: (35.04,28.03,42.05,6.84,5.47,8.21),
+    },
+}
 
+# ==============================================================
+# BÖLÜM 2: GİRİŞ SİSTEMİ
+# ==============================================================
 def veri_al():
-    print("=== ENERJİ SİMÜLASYONU - VERİ GİRİŞİ ===\n")
+    print("\n" + "=" * 65)
+    print("      YENİLENEBİLİR ENERJİ YÖNETİM SİSTEMİ (YEYS)")
+    print("      Mayıs Ayı Simülasyonu")
+    print("=" * 65)
 
-    # Kaç saatlik simülasyon yapılacak?
+    sehirler = list(URETIM_VERILERI.keys())
+    print("\nMevcut şehirler:")
+    for i, s in enumerate(sehirler, 1):
+        print(f"  {i}. {s}")
+
     while True:
         try:
-            saat_sayisi = int(input("Kaç saatlik simülasyon yapmak istiyorsunuz? "))
-            if saat_sayisi <= 0:
-                print("Hata: Saat sayısı 0'dan büyük olmalıdır.")
-                continue
-            break
+            secim = int(input("\nŞehir numarasını seçin: "))
+            if 1 <= secim <= len(sehirler):
+                sehir = sehirler[secim - 1]
+                break
+            print(f"  Hata: 1-{len(sehirler)} arasında bir değer girin.")
         except ValueError:
-            print("Hata: Lütfen geçerli bir sayı girin.")
+            print("  Hata: Geçerli bir sayı girin.")
 
-    # Güneş üretim verilerini kullanıcıdan al
-    print(f"\nGüneş üretim verilerini girin ({saat_sayisi} değer, boşlukla ayırın):")
     while True:
         try:
-            solar = list(map(float, input("Solar (kWh): ").split()))
-            if len(solar) != saat_sayisi:
-                print(f"Hata: {saat_sayisi} değer girmelisiniz, {len(solar)} girdiniz.")
-                continue
-            if any(x < 0 for x in solar):
-                print("Hata: Negatif değer girilemez.")
-                continue
-            break
+            gun = int(input(f"\nMayıs ayından simüle edilecek günü girin (1-31): "))
+            if 1 <= gun <= 31:
+                break
+            print("  Hata: 1-31 arasında bir gün girin.")
         except ValueError:
-            print("Hata: Lütfen sayısal değerler girin.")
+            print("  Hata: Geçerli bir sayı girin.")
 
-    # Rüzgar üretim verilerini kullanıcıdan al
-    print(f"\nRüzgar üretim verilerini girin ({saat_sayisi} değer, boşlukla ayırın):")
     while True:
         try:
-            wind = list(map(float, input("Wind (kWh): ").split()))
-            if len(wind) != saat_sayisi:
-                print(f"Hata: {saat_sayisi} değer girmelisiniz, {len(wind)} girdiniz.")
-                continue
-            if any(x < 0 for x in wind):
-                print("Hata: Negatif değer girilemez.")
-                continue
-            break
+            tuketim = float(input("\nGünlük elektrik tüketiminiz (kWh): "))
+            if tuketim > 0:
+                break
+            print("  Hata: Tüketim 0'dan büyük olmalıdır.")
         except ValueError:
-            print("Hata: Lütfen sayısal değerler girin.")
+            print("  Hata: Geçerli bir sayı girin.")
 
-    # Her saat için evdeki toplam elektrik tüketimini al
-    print(f"\nSaatlik elektrik tüketimini girin ({saat_sayisi} değer, boşlukla ayırın):")
     while True:
         try:
-            load = list(map(float, input("Load (kWh): ").split()))
-            if len(load) != saat_sayisi:
-                print(f"Hata: {saat_sayisi} değer girmelisiniz, {len(load)} girdiniz.")
-                continue
-            if any(x < 0 for x in load):
-                print("Hata: Negatif değer girilemez.")
-                continue
-            break
+            batarya_yuzde = float(input(f"\nBatarya başlangıç doluluk seviyesi (0-100 %): "))
+            if 0 <= batarya_yuzde <= 100:
+                break
+            print("  Hata: 0-100 arasında bir değer girin.")
         except ValueError:
-            print("Hata: Lütfen sayısal değerler girin.")
+            print("  Hata: Geçerli bir sayı girin.")
 
-    # Her saat için şebeke elektriği var mı? (1 = var, 0 = yok)
-    print(f"\nHer saat için şebeke elektriği durumunu girin ({saat_sayisi} değer, 1=var 0=yok):")
-    while True:
-        try:
-            grid_available_raw = list(map(int, input("Şebeke (1/0): ").split()))
-            if len(grid_available_raw) != saat_sayisi:
-                print(f"Hata: {saat_sayisi} değer girmelisiniz, {len(grid_available_raw)} girdiniz.")
-                continue
-            if any(x not in [0, 1] for x in grid_available_raw):
-                print("Hata: Yalnızca 0 veya 1 girebilirsiniz.")
-                continue
-            # 1 → True, 0 → False olarak dönüştür
-            grid_available = [x == 1 for x in grid_available_raw]
-            break
-        except ValueError:
-            print("Hata: Lütfen 0 veya 1 girin.")
-
-    # Batarya kapasitesini al
-    while True:
-        try:
-            battery_capacity = float(input("\nBatarya kapasitesi (kWh): "))
-            if battery_capacity <= 0:
-                print("Hata: Batarya kapasitesi 0'dan büyük olmalıdır.")
-                continue
-            break
-        except ValueError:
-            print("Hata: Lütfen geçerli bir sayı girin.")
-
-    # Bataryanın başlangıç seviyesini al
-    while True:
-        try:
-            battery = float(input(f"Bataryanın başlangıç seviyesi (0 - {battery_capacity} kWh): "))
-            if battery < 0 or battery > battery_capacity:
-                print(f"Hata: Değer 0 ile {battery_capacity} arasında olmalıdır.")
-                continue
-            break
-        except ValueError:
-            print("Hata: Lütfen geçerli bir sayı girin.")
-
-    # Grid limitini al
-    while True:
-        try:
-            grid_limit = float(input("\nGrid limiti (kWh, 0 = limit yok): "))
-            if grid_limit < 0:
-                print("Hata: Grid limiti negatif olamaz.")
-                continue
-            break
-        except ValueError:
-            print("Hata: Lütfen geçerli bir sayı girin.")
-
-    # Eğer grid limiti 0 girilirse sınırsız kabul et
-    if grid_limit == 0:
-        grid_limit = float('inf')
-
-    # Şebekeden alınan elektriğin kWh birim fiyatını al
-    while True:
-        try:
-            grid_price = float(input("Şebeke elektriği birim fiyatı (TL/kWh): "))
-            if grid_price < 0:
-                print("Hata: Fiyat negatif olamaz.")
-                continue
-            break
-        except ValueError:
-            print("Hata: Lütfen geçerli bir sayı girin.")
-
-    return solar, wind, load, grid_available, battery, battery_capacity, grid_limit, grid_price
+    return sehir, gun, tuketim, batarya_yuzde
 
 
-# ===========================================================
-# BÖLÜM 2: ENERJİ HESAPLAMA
-# KİŞİ: ALİ
-# ===========================================================
+# ==============================================================
+# BÖLÜM 3: ÜRETİM HESAPLAMA
+# ==============================================================
+def uretim_hesapla(sehir, gun):
+    ges_ort, ges_alt, ges_ust, res_ort, res_alt, res_ust = URETIM_VERILERI[sehir][gun]
 
-def uretim_hesapla(solar_value, wind_value):
-    # Güneş ve rüzgar üretimini toplayarak toplam üretimi döndür
-    production = solar_value + wind_value
-    return production
+    overheat_panel_sayisi = 0
 
+    # OVER HEAT: doğu şehirlerde %25 ihtimalle panel aşırı ısınması
+    if sehir in DOGU_SEHIRLER:
+        if random.random() < 0.25:
+            overheat_panel_sayisi = random.randint(1, 3)
+            kayip_oran = overheat_panel_sayisi / PANEL_SAYISI
+            ges_ort = round(ges_ort * (1 - kayip_oran), 2)
 
-def denge_hesapla(production, load_value):
-    # Üretimden tüketimi çıkar
-    # Pozitif: fazla enerji var → bataryaya gider
-    # Negatif: açık var → batarya veya gridden karşılanır
-    balance = production - load_value
-    return balance
+    # ±%3-4 rastgele sapma
+    ges_sapma = random.uniform(-0.04, 0.04)
+    res_sapma = random.uniform(-0.04, 0.04)
+    ges_uretim = round(ges_ort * (1 + ges_sapma), 2)
+    res_uretim = round(res_ort * (1 + res_sapma), 2)
 
-
-def saatlik_hesapla(solar, wind, load):
-    # Her saat için üretim ve denge değerlerini hesapla ve listelere kaydet
-    uretim_listesi = []
-    denge_listesi = []
-
-    for i in range(len(solar)):
-        production = uretim_hesapla(solar[i], wind[i])
-        balance = denge_hesapla(production, load[i])
-
-        uretim_listesi.append(production)
-        denge_listesi.append(balance)
-
-    return uretim_listesi, denge_listesi
+    return ges_uretim, res_uretim, overheat_panel_sayisi
 
 
-# ===========================================================
-# BÖLÜM 3: BATARYA YÖNETİMİ
-# KİŞİ: BURAK
-# ===========================================================
+# ==============================================================
+# BÖLÜM 4: ENERJİ DENGESİ (ANA AKIŞ)
+# ==============================================================
+def enerji_dengesi_hesapla(ges, res, tuketim, batarya):
+    toplam_uretim = ges + res
+    denge = toplam_uretim - tuketim
 
-def batarya_doldur(battery, balance, battery_capacity):
-    wasted = 0  # Toprağa atılan fazlalık enerji
+    grid_kullanim  = 0.0
+    topraga_atilan = 0.0
 
-    battery = battery + balance
-
-    # Batarya kapasiteyi aştıysa fazlalık toprağa atılır
-    if battery > battery_capacity:
-        wasted = battery - battery_capacity
-        battery = battery_capacity  # Batarya maksimuma sabitlenir
-
-    return battery, wasted
-
-
-def batarya_bos_et(battery, deficit):
-    # Enerji açığını bataryadan karşılamaya çalış
-    if battery >= deficit:
-        battery = battery - deficit
-        kalan_acik = 0  # Açık tamamen kapandı
+    if denge >= 0:
+        bos_kapasite = BATARYA_KAPASITESI - batarya
+        if denge <= bos_kapasite:
+            batarya += denge
+        else:
+            topraga_atilan = round(denge - bos_kapasite, 3)
+            batarya = BATARYA_KAPASITESI
     else:
-        # Batarya yetmiyor, kalan açık hesapla
-        kalan_acik = deficit - battery
-        battery = 0  # Batarya tamamen boşaldı
+        acik = abs(denge)
+        if batarya >= acik:
+            batarya = round(batarya - acik, 3)
+        else:
+            grid_kullanim = round(acik - batarya, 3)
+            batarya = 0.0
 
-    return battery, kalan_acik
+    batarya = round(min(batarya, BATARYA_KAPASITESI), 3)
+    return batarya, grid_kullanim, topraga_atilan, toplam_uretim
 
 
-def batarya_isle(battery, balance, battery_capacity):
-    # Denge pozitifse bataryayı doldur, negatifse boşalt
-    # NOT: Batarya YALNIZCA yenilenebilir enerji fazlasında (balance > 0) dolar.
-    # balance = üretim - tüketim olduğundan, grid buraya dahil değildir.
-    kalan_acik = 0
-    wasted = 0
+# ==============================================================
+# BÖLÜM 5: KESİNTİ SİMÜLASYONU
+# ==============================================================
+def kesinti_simulasyonu(tuketim, toplam_uretim, batarya_mevcut):
+    kesinti_suresi = random.randint(0, 5)
 
-    if balance >= 0:
-        # Yenilenebilir enerji fazlası var → bataryaya ekle, sığmazsa toprağa at
-        battery, wasted = batarya_doldur(battery, balance, battery_capacity)
+    if kesinti_suresi == 0:
+        return 0, 0.0, 0.0
+
+    saatlik_tuketim = tuketim / 24
+    saatlik_uretim  = toplam_uretim / 24
+    saatlik_acik    = max(0.0, saatlik_tuketim - saatlik_uretim)
+
+    if saatlik_acik == 0:
+        # Yenilenebilir üretim kesinti boyunca tüketimi karşılıyor
+        return kesinti_suresi, float(kesinti_suresi), 0.0
+
+    max_kurtarilan = batarya_mevcut / saatlik_acik
+    kurtarilan     = round(min(float(kesinti_suresi), max_kurtarilan), 2)
+    blackout_saat  = round(kesinti_suresi - kurtarilan, 2)
+
+    return kesinti_suresi, kurtarilan, blackout_saat
+
+
+# ==============================================================
+# BÖLÜM 6: SENARYO BELİRLEME
+# ==============================================================
+def senaryo_belirle(toplam_uretim, tuketim, topraga_atilan, grid_kullanim,
+                    batarya_bas, batarya_son, blackout_saat):
+    denge = toplam_uretim - tuketim
+
+    if denge >= 0 and topraga_atilan > 0:
+        return 1   # Üretti, batarya doldu, fazla toprağa
+    if denge >= 0:
+        return 4   # Üretti, kalan bataryaya verildi
+    # denge < 0
+    if grid_kullanim > 0 and blackout_saat > 0:
+        return 5   # Grid devreye girdi, kesintide blackout
+    if grid_kullanim > 0:
+        return 2   # Batarya + grid karşıladı
+    if blackout_saat > 0:
+        return 3   # Batarya bitti, grid yok, blackout
+    return 4       # Batarya tek başına karşıladı
+
+
+# ==============================================================
+# BÖLÜM 7: EKONOMİK ANALİZ
+# ==============================================================
+def ekonomik_analiz(tuketim, grid_kullanim):
+    fatura_sistemsiz  = round(tuketim * GRID_FIYATI, 2)
+    fatura_sistemli   = round(grid_kullanim * GRID_FIYATI, 2)
+    gunluk_tasarruf   = round(fatura_sistemsiz - fatura_sistemli, 2)
+    aylik_tasarruf    = round(gunluk_tasarruf * 31, 2)   # Mayıs = 31 gün
+    aylik_fatura_yeys = round(fatura_sistemli * 31, 2)
+    aylik_fatura_yok  = round(fatura_sistemsiz * 31, 2)
+    yillik_tasarruf   = round(gunluk_tasarruf * 365, 2)
+
+    if yillik_tasarruf > 0:
+        amortisman_yil   = round(SISTEM_MALIYETI / yillik_tasarruf, 1)
+        omur_boyu_kazanc = round(yillik_tasarruf * SISTEM_OMRU - SISTEM_MALIYETI, 2)
     else:
-        # Enerji açığı var → deficit pozitif sayı olarak alınır
-        deficit = abs(balance)
-        battery, kalan_acik = batarya_bos_et(battery, deficit)
+        amortisman_yil   = None
+        omur_boyu_kazanc = round(-SISTEM_MALIYETI, 2)
 
-    return battery, kalan_acik, wasted
+    return (fatura_sistemsiz, fatura_sistemli, gunluk_tasarruf,
+            aylik_fatura_yok, aylik_fatura_yeys, aylik_tasarruf,
+            yillik_tasarruf, amortisman_yil, omur_boyu_kazanc)
 
 
-# ===========================================================
-# BÖLÜM 4: GRID & BLACKOUT SİSTEMİ
-# KİŞİ: YAVUZ
-# ===========================================================
+# ==============================================================
+# BÖLÜM 8: RAPOR
+# ==============================================================
+SENARYO_METINLERI = {
+    1: "Uretim tüketimi karşıladı. Batarya doldu. Fazla enerji toprağa verildi.",
+    2: "Uretim yetersiz kaldı. Batarya kullanıldı, bitti. Açık şebekeden sağlandı.",
+    3: "Uretim yetersiz. Batarya bitti. Şebeke karşılayamadı. BLACKOUT oluştu.",
+    4: "Uretim tüketimi karşıladı. Kalan enerji bataryaya verildi.",
+    5: "Uretim yetersiz. Grid devreye girdi. Kesinti sırasında BLACKOUT oluştu.",
+}
 
-def grid_kullan(kalan_acik, grid_limit, grid_available):
-    grid_used = 0
-    blackout = False
 
-    # Enerji açığı yoksa yapılacak bir şey yok
-    if kalan_acik == 0:
-        return grid_used, blackout
+def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
+                 ges, res, toplam_uretim, grid_kullanim, topraga_atilan,
+                 overheat_panel, kesinti_suresi, kurtarilan_saat, blackout_saat,
+                 fatura_sistemsiz, fatura_sistemli, gunluk_tasarruf,
+                 aylik_fatura_yok, aylik_fatura_yeys, aylik_tasarruf,
+                 yillik_tasarruf, amortisman_yil, omur_boyu_kazanc, senaryo_no):
 
-    # Şebeke elektriği yoksa direkt blackout
-    if not grid_available:
-        blackout = True
-        return grid_used, blackout
+    denge          = round(toplam_uretim - tuketim, 3)
+    batarya_degisim = round(batarya_son - batarya_bas, 3)
+    bas_yuzde      = round(batarya_bas / BATARYA_KAPASITESI * 100, 1)
+    son_yuzde      = round(batarya_son / BATARYA_KAPASITESI * 100, 1)
 
-    # Şebeke var, limit yetiyorsa açığı kapat
-    if kalan_acik <= grid_limit:
-        grid_used = kalan_acik
+    ayrac = "=" * 65
+
+    print("\n" + ayrac)
+    print("           YEYS - SİMÜLASYON SONUÇ RAPORU")
+    print(ayrac)
+    print(f"  Sehir : {sehir:<15}  Tarih : {gun} Mayıs")
+    print(f"  Batarya Kapasitesi : {BATARYA_KAPASITESI} kWh")
+    print(ayrac)
+
+    # OVER HEAT uyarısı
+    if overheat_panel > 0:
+        print(f"\n  *** OVER HEAT UYARISI ***")
+        print(f"  {overheat_panel} güneş paneli aşırı ısınma nedeniyle devre dışı kaldı!")
+        print(f"  GES üretimi {overheat_panel}/{PANEL_SAYISI} panel oranında düşürüldü.")
+        print()
+
+    print("--- ÜRETİM BİLGİLERİ " + "-" * 43)
+    print(f"  GES (Güneş) Üretimi      : {ges:.2f} kWh")
+    print(f"  RES (Rüzgar) Üretimi     : {res:.2f} kWh")
+    print(f"  Toplam Üretim            : {toplam_uretim:.2f} kWh")
+    print(f"  Günlük Tüketim           : {tuketim:.2f} kWh")
+    if denge >= 0:
+        print(f"  Enerji Dengesi           : +{denge:.2f} kWh  (fazla)")
     else:
-        # Grid limiti de yetmiyor → blackout
-        blackout = True
+        print(f"  Enerji Dengesi           : {denge:.2f} kWh  (açık)")
 
-    return grid_used, blackout
-
-
-# ===========================================================
-# BÖLÜM 5: ANALİZ & RAPORLAMA (OUTPUT)
-# KİŞİ: CAN
-# ===========================================================
-
-def rapor_goster(solar, wind, load, battery_baslangic, battery_capacity, battery_history, grid_history, wasted_history, blackout_listesi, grid_price):
-
-    toplam_saat     = len(solar)
-    total_load      = sum(load)
-    total_grid_used = sum(grid_history)
-    total_wasted    = sum(wasted_history)   # Toprağa atılan toplam enerji
-    blackout_sayisi = blackout_listesi.count(True)
-
-    # Tüketimin kaynağı: grid dışında kalan her şey yenilenebilir kaynaklıdır
-    renewable_consumed = total_load - total_grid_used
-    if renewable_consumed < 0:
-        renewable_consumed = 0
-
-    # Batarya karşılaştırması
-    battery_son      = battery_history[-1]
-    battery_degisim  = battery_son - battery_baslangic   # + ise doldu, - ise boşaldı
-    battery_son_yuzde = (battery_son / battery_capacity) * 100
-    battery_bas_yuzde = (battery_baslangic / battery_capacity) * 100
-
-    # Maliyet hesabı
-    # Hiç yenilenebilir kullanmasaydı tüm tüketimi şebekeden alacaktı
-    hypothetical_cost = total_load * grid_price
-    # Gerçekte yalnızca grid'den aldığı kadar ödedi
-    actual_cost       = total_grid_used * grid_price
-    # Yenilenebilir enerji sayesinde kazanılan para
-    savings           = hypothetical_cost - actual_cost
-
-    # Sistem stabilitesi
-    sistem_stabil = blackout_sayisi == 0
-
-    print("\n" + "=" * 55)
-    print("          SİMÜLASYON SONUÇ RAPORU")
-    print("=" * 55)
-
-    print(f"\n{'Simülasyon süresi':<30}: {toplam_saat} saat")
-    print(f"{'Toplam tüketim':<30}: {total_load:.2f} kWh")
-    print(f"{'Toprağa atılan enerji':<30}: {total_wasted:.2f} kWh")
-
-    # Tüketimin kaynağı yüzdeleri
-    if total_load > 0:
-        renewable_yuzde = (renewable_consumed / total_load) * 100
-        grid_yuzde      = (total_grid_used / total_load) * 100
+    print("\n--- BATARYA DURUMU " + "-" * 46)
+    print(f"  Başlangıç Seviyesi       : {batarya_bas:.2f} kWh  (%{bas_yuzde})")
+    print(f"  Bitiş Seviyesi           : {batarya_son:.2f} kWh  (%{son_yuzde})")
+    if batarya_degisim >= 0:
+        print(f"  Değişim                  : +{batarya_degisim:.2f} kWh  (şarj)")
     else:
-        renewable_yuzde = 0
-        grid_yuzde      = 0
+        print(f"  Değişim                  : {batarya_degisim:.2f} kWh  (deşarj)")
 
-    print(f"\n--- Tüketimin Kaynağı ---")
-    print(f"{'  Yenilenebilir kaynaklı':<30}: {renewable_consumed:.2f} kWh  (%{renewable_yuzde:.1f})")
-    print(f"{'  Şebekeden gelen':<30}: {total_grid_used:.2f} kWh  (%{grid_yuzde:.1f})")
+    print("\n--- ENERJİ AKIŞI " + "-" * 47)
+    print(f"  Şebekeden Çekilen        : {grid_kullanim:.2f} kWh")
+    print(f"  Toprağa Atılan (Fazla)   : {topraga_atilan:.2f} kWh")
 
-    # Batarya karşılaştırması
-    print(f"\n--- Batarya Durumu ---")
-    print(f"{'  Başlangıç seviyesi':<30}: {battery_baslangic:.2f} kWh  (%{battery_bas_yuzde:.1f})")
-    print(f"{'  Son seviye':<30}: {battery_son:.2f} kWh  (%{battery_son_yuzde:.1f})")
-    if battery_degisim >= 0:
-        print(f"{'  Değişim':<30}: +{battery_degisim:.2f} kWh  (doldu)")
+    print("\n--- KESİNTİ SİMÜLASYONU " + "-" * 40)
+    if kesinti_suresi == 0:
+        print("  Bugün elektrik kesintisi yaşanmadı.")
     else:
-        print(f"{'  Değişim':<30}: {battery_degisim:.2f} kWh  (boşaldı)")
+        print(f"  Kesinti Süresi           : {kesinti_suresi} saat")
+        print(f"  YEYS Koruması            : {kurtarilan_saat:.1f} saat")
+        print(f"  Blackout Süresi          : {blackout_saat:.1f} saat")
+        print()
+        print(f"  Bugün toplam {kesinti_suresi} saatlik elektrik kesintisi yaşandı.")
+        if kurtarilan_saat > 0:
+            print(f"  Bu sistem olmasaydı bu {kesinti_suresi} saat boyunca elektrik")
+            print(f"  kullanılamazdı. Ancak YEYS sayesinde {kurtarilan_saat:.1f} saatlik")
+            print(f"  kesinti süresi boyunca enerji sağlandı.")
+        if blackout_saat > 0:
+            print(f"  Kalan {blackout_saat:.1f} saatlik sürede batarya tükendi: BLACKOUT.")
 
-    print(f"\n{'Kaç kez blackout oldu':<30}: {blackout_sayisi} kez")
-    if sistem_stabil:
-        print(f"{'Sistem durumu':<30}: STABIL ✓")
-    else:
-        blackout_saatleri = [i + 1 for i, b in enumerate(blackout_listesi) if b]
-        print(f"{'Sistem durumu':<30}: BLACKOUT OLUŞTU ✗")
-        print(f"{'Blackout saatleri':<30}: {blackout_saatleri}")
+    print(f"\n--- SENARYO {senaryo_no} " + "-" * 52)
+    print(f"  {SENARYO_METINLERI.get(senaryo_no, '')}")
 
-    # Maliyet raporu
-    print("\n" + "-" * 55)
+    print("\n" + "-" * 65)
     print("  MALİYET ANALİZİ")
-    print("-" * 55)
-    print(f"{'Şebeke birim fiyatı':<30}: {grid_price:.2f} TL/kWh")
-    print(f"{'Gerçek fatura (grid maliyeti)':<30}: {actual_cost:.2f} TL")
-    print(f"{'Hiç yenilenebilir olmasaydı':<30}: {hypothetical_cost:.2f} TL")
-    print(f"{'Yenilenebilir enerjiden kazanç':<30}: {savings:.2f} TL")
+    print("-" * 65)
+    print(f"  Şebeke Birim Fiyatı      : {GRID_FIYATI:.2f} TL/kWh")
+    print(f"  YEYS olmadan fatura      : {fatura_sistemsiz:.2f} TL/gün")
+    print(f"  YEYS ile fatura          : {fatura_sistemli:.2f} TL/gün")
 
-    # Saatlik detay tablosu
-    print("\n" + "-" * 96)
-    print(f"{'Saat':<5} {'Solar':>7} {'Wind':>7} {'Üretim':>7} {'Batarya':>9} {'Grid':>7} {'Toprak':>8} {'Durum':>10} {'Tüketim':>9}")
-    print("-" * 96)
+    print("\n--- YATIRIM ANALİZİ " + "-" * 44)
+    print(f"  Sistem Kurulum Maliyeti  : {SISTEM_MALIYETI:,} TL")
+    print(f"  Tahmini Yıllık Tasarruf  : {yillik_tasarruf:,.2f} TL")
+    if amortisman_yil is not None:
+        print(f"  Amortisman Süresi        : {amortisman_yil:.1f} yıl")
+        print(f"  Sistem Ömrü              : {SISTEM_OMRU} yıl")
+        if omur_boyu_kazanc >= 0:
+            print(f"  Ömür Boyu Net Kazanç     : +{omur_boyu_kazanc:,.2f} TL")
+        else:
+            print(f"  Ömür Boyu Net Kazanç     : {omur_boyu_kazanc:,.2f} TL  (zarar)")
+    else:
+        print("  Amortisman Süresi        : Hesaplanamadi (tasarruf yok)")
 
-    for i in range(toplam_saat):
-        production = solar[i] + wind[i]
-        durum = "BLACKOUT" if blackout_listesi[i] else "OK"
-        print(
-            f"{i+1:<5} {solar[i]:>7.2f} {wind[i]:>7.2f} {production:>7.2f} "
-            f"{battery_history[i]:>9.2f} {grid_history[i]:>7.2f} "
-            f"{wasted_history[i]:>8.2f} {durum:>10} {load[i]:>9.2f}"
-        )
+    # --- KAR / ZARAR ÖZETİ ---
+    print("\n" + "=" * 65)
+    print("  FATURA KAR / ZARAR ÖZETİ  (YEYS kullanarak ne kadar kazandın?)")
+    print("=" * 65)
 
-    print("-" * 96)
-    print("=" * 55)
+    print(f"\n  {'':5}{'YEYS OLMADAN':>18}{'YEYS İLE':>18}{'FARK (KAZANÇ)':>18}")
+    print(f"  {'-'*59}")
+
+    gunluk_isaretli = f"+{gunluk_tasarruf:.2f} TL" if gunluk_tasarruf >= 0 else f"{gunluk_tasarruf:.2f} TL"
+    aylik_isaretli  = f"+{aylik_tasarruf:.2f} TL"  if aylik_tasarruf  >= 0 else f"{aylik_tasarruf:.2f} TL"
+
+    print(f"  {'Günlük':<8}{fatura_sistemsiz:>14.2f} TL{fatura_sistemli:>14.2f} TL{gunluk_isaretli:>18}")
+    print(f"  {'Aylık':<8}{aylik_fatura_yok:>14.2f} TL{aylik_fatura_yeys:>14.2f} TL{aylik_isaretli:>18}")
+    print(f"  {'-'*59}")
+
+    if gunluk_tasarruf > 0:
+        print(f"\n  Bu gun YEYS sayesinde {gunluk_tasarruf:.2f} TL daha az fatura odedin.")
+        print(f"  Tum Mayis ayi icin bu tasarrufu surerdin:")
+        print(f"  Aylik toplam kazanc: {aylik_tasarruf:.2f} TL")
+    elif gunluk_tasarruf == 0:
+        print(f"\n  Bugun tum enerji sebekeden karsilandi; YEYS etkisi yok.")
+    else:
+        print(f"\n  Bugun ek sebeke kullanimi nedeniyle {abs(gunluk_tasarruf):.2f} TL ekstra odendi.")
+
+    print("=" * 65)
 
 
-# ===========================================================
+# ==============================================================
 # ANA AKIŞ
-# ===========================================================
-
-def simulasyon_calistir(solar, wind, load, grid_available, battery, battery_capacity, grid_limit):
-    # Simülasyon boyunca saatlik verileri tutacak listeler
-    battery_history  = []
-    grid_history     = []
-    wasted_history   = []   # Her saat toprağa atılan enerji
-    blackout_listesi = []
-
-    # Üretim ve denge değerlerini hesapla
-    _, denge_listesi = saatlik_hesapla(solar, wind, load)
-
-    print("\nSimülasyon başlıyor...")
-
-    # Her saat için simülasyonu adım adım işle
-    for i in range(len(solar)):
-        balance = denge_listesi[i]
-
-        # Bataryayı güncelle; kalan açığı ve toprağa atılan enerjiyi al
-        battery, kalan_acik, wasted = batarya_isle(battery, balance, battery_capacity)
-
-        # Kalan açık varsa ve şebeke durumuna göre grid'den karşıla
-        grid_used, blackout = grid_kullan(kalan_acik, grid_limit, grid_available[i])
-
-        # Bu saatin sonuçlarını kaydet
-        battery_history.append(battery)
-        grid_history.append(grid_used)
-        wasted_history.append(wasted)
-        blackout_listesi.append(blackout)
-
-    return battery_history, grid_history, wasted_history, blackout_listesi
-
-
+# ==============================================================
 def main():
-    # 1. Kullanıcıdan verileri al
-    solar, wind, load, grid_available, battery, battery_capacity, grid_limit, grid_price = veri_al()
+    sehir, gun, tuketim, batarya_yuzde = veri_al()
 
-    # Başlangıç batarya seviyesini rapor için saklıyoruz (simülasyon battery'yi değiştirir)
-    battery_baslangic = battery
+    batarya_bas = round(BATARYA_KAPASITESI * batarya_yuzde / 100, 2)
 
-    # 2. Simülasyonu çalıştır
-    battery_history, grid_history, wasted_history, blackout_listesi = simulasyon_calistir(
-        solar, wind, load, grid_available, battery, battery_capacity, grid_limit
+    # Üretimi hesapla (sapma + overheat)
+    ges, res, overheat_panel = uretim_hesapla(sehir, gun)
+    toplam_uretim = round(ges + res, 2)
+
+    # Enerji dengesi
+    batarya_son, grid_kullanim, topraga_atilan, _ = enerji_dengesi_hesapla(
+        ges, res, tuketim, batarya_bas
     )
 
-    # 3. Sonuçları raporla
-    rapor_goster(solar, wind, load, battery_baslangic, battery_capacity, battery_history, grid_history, wasted_history, blackout_listesi, grid_price)
+    # Kesinti simülasyonu (kalan batarya üzerinden)
+    kesinti_suresi, kurtarilan_saat, blackout_saat = kesinti_simulasyonu(
+        tuketim, toplam_uretim, batarya_son
+    )
+
+    # Senaryo belirleme
+    senaryo_no = senaryo_belirle(
+        toplam_uretim, tuketim, topraga_atilan,
+        grid_kullanim, batarya_bas, batarya_son, blackout_saat
+    )
+
+    # Ekonomik analiz
+    (fatura_sistemsiz, fatura_sistemli, gunluk_tasarruf,
+     aylik_fatura_yok, aylik_fatura_yeys, aylik_tasarruf,
+     yillik_tasarruf, amortisman_yil, omur_boyu_kazanc) = ekonomik_analiz(tuketim, grid_kullanim)
+
+    # Rapor
+    rapor_goster(
+        sehir, gun, tuketim, batarya_bas, batarya_son,
+        ges, res, toplam_uretim, grid_kullanim, topraga_atilan,
+        overheat_panel, kesinti_suresi, kurtarilan_saat, blackout_saat,
+        fatura_sistemsiz, fatura_sistemli, gunluk_tasarruf,
+        aylik_fatura_yok, aylik_fatura_yeys, aylik_tasarruf,
+        yillik_tasarruf, amortisman_yil, omur_boyu_kazanc, senaryo_no
+    )
 
 
-# Programı başlat
 main()
