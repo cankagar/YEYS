@@ -3,13 +3,13 @@ import random
 # ==============================================================
 # SİSTEM SABİTLERİ
 # ==============================================================
-BATARYA_KAPASITESI = 10.0
+BATARYA_KAPASITESI = 10
 SISTEM_MALIYETI    = 400_000
-GRID_FIYATI        = 5.5
+GRID_FIYATI        = 4
 SATIS_FIYATI       = 1.10
 SISTEM_OMRU        = 30
 PANEL_SAYISI       = 12
-DOGU_SEHIRLER      = {"VAN", "ŞANLIURFA"}
+DOGU_SEHIRLER      = {"ŞANLIURFA" , "ANTALYA"}
 
 # ==============================================================
 # BÖLÜM 1: VERİ TABLOSU
