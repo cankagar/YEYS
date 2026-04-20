@@ -1,26 +1,120 @@
 @import "tailwindcss";
 
+/* ── Organic Biophilic Design System ── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg:           #F0FDF4;
+  --bg-card:      #FFFFFF;
+  --bg-muted:     #DCFCE7;
+  --border:       #BBF7D0;
+  --border-strong:#86EFAC;
+  --primary:      #16A34A;
+  --primary-dark: #15803D;
+  --primary-light:#22C55E;
+  --accent:       #059669;
+  --text-base:    #14532D;
+  --text-muted:   #166534;
+  --text-subtle:  #4ADE80;
+  --success:      #16A34A;
+  --warning:      #D97706;
+  --danger:       #DC2626;
+  --shadow-sm:    0 1px 3px rgba(22,163,74,0.10);
+  --shadow-md:    0 4px 16px rgba(22,163,74,0.12);
+  --shadow-lg:    0 8px 32px rgba(22,163,74,0.15);
+  --radius-card:  20px;
+  --radius-btn:   14px;
+  --radius-input: 12px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text-base);
+  font-family: var(--font-geist-sans, 'Inter', system-ui, sans-serif);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Card base ── */
+.card {
+  background: var(--bg-card);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow 200ms ease, border-color 200ms ease;
+}
+.card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+/* ── Section label ── */
+.section-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+/* ── Input base ── */
+.field-input {
+  width: 100%;
+  border-radius: var(--radius-input);
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  padding: 0.55rem 0.85rem;
+  font-size: 0.9rem;
+  color: var(--text-base);
+  outline: none;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+.field-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(22,163,74,0.15);
+}
+
+/* ── Animate-in (JS adds .visible) ── */
+.anim-entry {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 420ms cubic-bezier(0.22,1,0.36,1),
+              transform 420ms cubic-bezier(0.22,1,0.36,1);
+}
+.anim-entry.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Stagger children ── */
+.anim-entry:nth-child(1) { transition-delay: 0ms;  }
+.anim-entry:nth-child(2) { transition-delay: 60ms; }
+.anim-entry:nth-child(3) { transition-delay: 120ms;}
+.anim-entry:nth-child(4) { transition-delay: 180ms;}
+.anim-entry:nth-child(5) { transition-delay: 240ms;}
+
+/* ── Battery bar ── */
+.battery-fill {
+  height: 100%;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, var(--primary-light), var(--primary));
+  transition: width 900ms cubic-bezier(0.22,1,0.36,1);
+}
+
+/* ── Pulse ring on stat cards ── */
+@keyframes ring-pulse {
+  0%   { box-shadow: 0 0 0 0   rgba(22,163,74,0.30); }
+  70%  { box-shadow: 0 0 0 10px rgba(22,163,74,0);    }
+  100% { box-shadow: 0 0 0 0   rgba(22,163,74,0);    }
+}
+.pulse-ring { animation: ring-pulse 2s ease infinite; }
+
+/* ── prefers-reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  .anim-entry { opacity: 1; transform: none; }
 }

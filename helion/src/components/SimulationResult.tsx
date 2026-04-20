@@ -1,265 +1,422 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import type { SimulationResult } from "@/lib/types";
-import { BATARYA_KAPASITESI, GRID_FIYATI, SATIS_FIYATI, SISTEM_OMRU, PANEL_BIRIM_FIYATI, TURBINE_BIRIM_FIYATI } from "@/lib/constants";
+import {
+  BATARYA_KAPASITESI, GRID_FIYATI, SATIS_FIYATI,
+  SISTEM_OMRU, PANEL_BIRIM_FIYATI, TURBINE_BIRIM_FIYATI,
+} from "@/lib/constants";
 
-const SENARYO_METNI: Record<number, (satisYap: boolean) => string> = {
+// ── rAF count-up hook ─────────────────────────────────────────────
+function useCountUp(target: number, duration = 900, decimals = 2) {
+  const [val, setVal] = useState(0);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    let start: number | null = null;
+    function step(ts: number) {
+      if (!start) start = ts;
+      const p = Math.min((ts - start) / duration, 1);
+      const eased = 1 - Math.pow(1 - p, 3); // ease-out-cubic
+      setVal(parseFloat((target * eased).toFixed(decimals)));
+      if (p < 1) rafRef.current = requestAnimationFrame(step);
+    }
+    rafRef.current = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [target, duration, decimals]);
+
+  return val;
+}
+
+// ── Animated battery bar ──────────────────────────────────────────
+function BatteryBar({ pct }: { pct: number }) {
+  const [width, setWidth] = useState(0);
+  useEffect(() => {
+    let start: number | null = null;
+    function step(ts: number) {
+      if (!start) start = ts;
+      const p = Math.min((ts - start) / 900, 1);
+      const eased = 1 - Math.pow(1 - p, 3);
+      setWidth(pct * eased);
+      if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }, [pct]);
+
+  return (
+    <div className="w-full h-3 rounded-full overflow-hidden" style={{ background: "var(--bg-muted)" }}>
+      <div
+        className="h-full rounded-full"
+        style={{
+          width: `${width}%`,
+          background: "linear-gradient(90deg, #4ade80, var(--primary), var(--accent))",
+          transition: "none",
+        }}
+      />
+    </div>
+  );
+}
+
+// ── Animated number display ────────────────────────────────────────
+function AnimNum({ value, suffix = "", prefix = "", dec = 2 }: {
+  value: number; suffix?: string; prefix?: string; dec?: number;
+}) {
+  const animated = useCountUp(value, 900, dec);
+  return <>{prefix}{animated.toLocaleString("tr-TR", { minimumFractionDigits: dec, maximumFractionDigits: dec })}{suffix}</>;
+}
+
+// ── Entry animation ────────────────────────────────────────────────
+function useEntryOnMount(delay = 0) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const id = window.setTimeout(
+      () => requestAnimationFrame(() => el.classList.add("visible")),
+      delay
+    );
+    return () => clearTimeout(id);
+  }, [delay]);
+  return ref;
+}
+
+// ── Sub-components ────────────────────────────────────────────────
+function ResultSection({
+  title, children, delay = 0,
+}: { title: string; children: React.ReactNode; delay?: number }) {
+  const ref = useEntryOnMount(delay);
+  return (
+    <div ref={ref} className="card anim-entry p-5 space-y-4">
+      <h3 className="section-label">{title}</h3>
+      {children}
+    </div>
+  );
+}
+
+function StatCard({
+  label, value, sub, highlight = false,
+}: { label: string; value: React.ReactNode; sub?: string; highlight?: boolean }) {
+  return (
+    <div
+      className="rounded-2xl p-4 space-y-1"
+      style={{
+        background: highlight ? "var(--bg-muted)" : "var(--bg)",
+        border: `1.5px solid ${highlight ? "var(--border-strong)" : "var(--border)"}`,
+      }}
+    >
+      <p className="text-xs font-semibold uppercase tracking-wide" style={{ color: "#6ee7b7" }}>{label}</p>
+      <p className="text-lg font-bold leading-tight" style={{ color: "var(--text-base)" }}>{value}</p>
+      {sub && <p className="text-xs" style={{ color: "#6ee7b7" }}>{sub}</p>}
+    </div>
+  );
+}
+
+const SENARYO_CONFIG: Record<number, { label: string; bg: string; border: string; color: string }> = {
+  1: { label: "Senaryo 1 — Fazla Üretim",  bg: "#F0FDF4", border: "#86EFAC", color: "#15803D" },
+  2: { label: "Senaryo 2 — Grid Devreye",   bg: "#FFFBEB", border: "#FCD34D", color: "#92400E" },
+  3: { label: "Senaryo 3 — BLACKOUT",       bg: "#FEF2F2", border: "#FCA5A5", color: "#991B1B" },
+  4: { label: "Senaryo 4 — Batarya Şarj",   bg: "#F0FDF4", border: "#86EFAC", color: "#15803D" },
+  5: { label: "Senaryo 5 — Kesintide BLACKOUT", bg: "#FEF2F2", border: "#FCA5A5", color: "#991B1B" },
+};
+
+const SENARYO_METNI: Record<number, (s: boolean) => string> = {
   1: (s) => `Üretim tüketimi karşıladı. Batarya doldu. Fazla enerji ${s ? "şebekeye satıldı" : "toprağa verildi"}.`,
-  2: () => "Üretim yetersiz kaldı. Batarya kullanıldı, bitti. Açık şebekeden sağlandı.",
+  2: () => "Üretim yetersiz. Batarya kullanıldı, bitti. Açık şebekeden sağlandı.",
   3: () => "Üretim yetersiz. Batarya bitti. Şebeke karşılayamadı. BLACKOUT oluştu.",
   4: () => "Üretim tüketimi karşıladı. Kalan enerji bataryaya verildi.",
   5: () => "Üretim yetersiz. Grid devreye girdi. Kesinti sırasında BLACKOUT oluştu.",
 };
 
-const SENARYO_RENK: Record<number, string> = {
-  1: "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300",
-  2: "border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300",
-  3: "border-red-500 bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300",
-  4: "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300",
-  5: "border-red-500 bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300",
-};
-
-function fmt(n: number, dec = 2) {
-  return n.toLocaleString("tr-TR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
-}
-
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
-  return (
-    <div className="bg-zinc-50 dark:bg-zinc-800/60 rounded-xl p-4">
-      <p className="text-xs text-zinc-500 dark:text-zinc-400 mb-1">{label}</p>
-      <p className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">{value}</p>
-      {sub && <p className="text-xs text-zinc-400 mt-0.5">{sub}</p>}
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6 space-y-4">
-      <h3 className="text-sm font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-        {title}
-      </h3>
-      {children}
-    </section>
-  );
-}
-
+// ── Main Result ───────────────────────────────────────────────────
 export default function SimulationResult({ result }: { result: SimulationResult }) {
-  const denge = result.toplamUretim - result.tuketim;
-  const bataryaDegisim = result.bataryaSon - result.bataryaBas;
-  const basYuzde = (result.bataryaBas / BATARYA_KAPASITESI) * 100;
-  const sonYuzde = (result.bataryaSon / BATARYA_KAPASITESI) * 100;
+  const headerRef = useEntryOnMount(0);
+  const denge      = result.toplamUretim - result.tuketim;
+  const batDegisim = result.bataryaSon - result.bataryaBas;
+  const sonYuzde   = (result.bataryaSon / BATARYA_KAPASITESI) * 100;
+  const basYuzde   = (result.bataryaBas / BATARYA_KAPASITESI) * 100;
+
+  const senaryo = SENARYO_CONFIG[result.senaryoNo] ?? SENARYO_CONFIG[4];
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Başlık */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
+    <div className="space-y-5 mt-2">
+      {/* Header */}
+      <div ref={headerRef} className="anim-entry flex items-center justify-between">
+        <h2 className="text-xl font-bold" style={{ color: "var(--text-base)" }}>
           Simülasyon Sonucu
         </h2>
-        <span className="text-sm text-zinc-500 dark:text-zinc-400">
+        <span className="text-sm font-medium px-3 py-1 rounded-full"
+              style={{ background: "var(--bg-muted)", color: "var(--primary)" }}>
           {result.sehir} — {result.gun} Mayıs
         </span>
       </div>
 
-      {/* Overheat uyarısı */}
+      {/* Overheat */}
       {result.overheatPanelSayisi > 0 && (
-        <div className="rounded-xl border border-orange-400 bg-orange-50 dark:bg-orange-950/30 p-4 text-orange-800 dark:text-orange-300 text-sm">
-          ⚠️ <strong>OVER HEAT:</strong> {result.overheatPanelSayisi}/{result.panelSayisi} güneş paneli aşırı ısındı, GES üretimi düştü.
+        <div className="rounded-2xl px-4 py-3 text-sm font-medium"
+             style={{ background: "#FFFBEB", border: "1.5px solid #FDE68A", color: "#92400E" }}>
+          ⚠️ <strong>OVER HEAT:</strong> {result.overheatPanelSayisi}/{result.panelSayisi} panel aşırı ısındı — GES üretimi düştü.
         </div>
       )}
 
-      {/* Senaryo */}
-      <div className={`rounded-xl border-2 p-4 text-sm font-medium ${SENARYO_RENK[result.senaryoNo]}`}>
-        <span className="font-bold">Senaryo {result.senaryoNo}:</span>{" "}
+      {/* Senaryo banner */}
+      <div
+        className="anim-entry visible rounded-2xl px-4 py-3 text-sm font-semibold"
+        style={{ background: senaryo.bg, border: `1.5px solid ${senaryo.border}`, color: senaryo.color }}
+      >
+        <span className="font-bold">{senaryo.label}:</span>{" "}
         {SENARYO_METNI[result.senaryoNo]?.(result.satisYap)}
       </div>
 
       {/* Üretim */}
-      <Section title="Üretim Bilgileri">
+      <ResultSection title="☀️ Üretim Bilgileri" delay={60}>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatCard label="GES (Güneş)" value={`${fmt(result.ges)} kWh`} sub={`${result.panelSayisi} panel`} />
-          <StatCard label="RES (Rüzgar)" value={`${fmt(result.res)} kWh`} sub={`${result.turbineSayisi} türbin`} />
-          <StatCard label="Toplam Üretim" value={`${fmt(result.toplamUretim)} kWh`} />
+          <StatCard
+            label="GES (Güneş)"
+            value={<AnimNum value={result.ges} suffix=" kWh" />}
+            sub={`${result.panelSayisi} panel`}
+          />
+          <StatCard
+            label="RES (Rüzgar)"
+            value={<AnimNum value={result.res} suffix=" kWh" />}
+            sub={`${result.turbineSayisi} türbin`}
+          />
+          <StatCard
+            label="Toplam Üretim"
+            value={<AnimNum value={result.toplamUretim} suffix=" kWh" />}
+            highlight
+          />
           <StatCard
             label="Enerji Dengesi"
-            value={`${denge >= 0 ? "+" : ""}${fmt(denge)} kWh`}
+            value={
+              <span style={{ color: denge >= 0 ? "var(--primary)" : "var(--danger)" }}>
+                {denge >= 0 ? "+" : ""}<AnimNum value={Math.abs(denge)} suffix=" kWh" />
+              </span>
+            }
             sub={denge >= 0 ? "fazla" : "açık"}
           />
         </div>
-      </Section>
+      </ResultSection>
 
       {/* Batarya */}
-      <Section title="Batarya Durumu">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <StatCard label="Başlangıç" value={`${fmt(result.bataryaBas)} kWh`} sub={`%${fmt(basYuzde, 1)}`} />
-          <StatCard label="Bitiş" value={`${fmt(result.bataryaSon)} kWh`} sub={`%${fmt(sonYuzde, 1)}`} />
+      <ResultSection title="🔋 Batarya Durumu" delay={120}>
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard
+            label="Başlangıç"
+            value={<AnimNum value={result.bataryaBas} suffix=" kWh" />}
+            sub={`%${basYuzde.toFixed(1)}`}
+          />
+          <StatCard
+            label="Bitiş"
+            value={<AnimNum value={result.bataryaSon} suffix=" kWh" />}
+            sub={`%${sonYuzde.toFixed(1)}`}
+            highlight
+          />
           <StatCard
             label="Değişim"
-            value={`${bataryaDegisim >= 0 ? "+" : ""}${fmt(bataryaDegisim)} kWh`}
-            sub={bataryaDegisim >= 0 ? "şarj" : "deşarj"}
+            value={
+              <span style={{ color: batDegisim >= 0 ? "var(--primary)" : "var(--warning)" }}>
+                {batDegisim >= 0 ? "+" : ""}<AnimNum value={Math.abs(batDegisim)} suffix=" kWh" />
+              </span>
+            }
+            sub={batDegisim >= 0 ? "şarj" : "deşarj"}
           />
         </div>
-        {/* Batarya bar */}
-        <div>
-          <div className="flex justify-between text-xs text-zinc-400 mb-1">
-            <span>Batarya Seviyesi</span>
-            <span>%{fmt(sonYuzde, 1)}</span>
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs" style={{ color: "#6ee7b7" }}>
+            <span>Bitiş Batarya Seviyesi</span>
+            <span>%{sonYuzde.toFixed(1)}</span>
           </div>
-          <div className="w-full h-3 bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-emerald-500 rounded-full transition-all duration-700"
-              style={{ width: `${Math.min(100, sonYuzde)}%` }}
-            />
-          </div>
+          <BatteryBar pct={sonYuzde} />
         </div>
-      </Section>
+      </ResultSection>
 
       {/* Enerji Akışı */}
-      <Section title="Enerji Akışı">
+      <ResultSection title="⚡ Enerji Akışı" delay={180}>
         <div className="grid grid-cols-2 gap-3">
           <StatCard
             label="Şebekeden Çekilen"
-            value={`${fmt(result.gridKullanim)} kWh`}
-            sub={`${fmt(result.gridKullanim * GRID_FIYATI)} TL`}
+            value={<AnimNum value={result.gridKullanim} suffix=" kWh" />}
+            sub={`${(result.gridKullanim * GRID_FIYATI).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL maliyet`}
           />
           {result.satisYap ? (
             <StatCard
               label="Şebekeye Satılan"
-              value={`${fmt(result.fazlaEnerji)} kWh`}
-              sub={`+${fmt(result.fazlaEnerji * SATIS_FIYATI)} TL gelir`}
+              value={<AnimNum value={result.fazlaEnerji} suffix=" kWh" />}
+              sub={`+${(result.fazlaEnerji * SATIS_FIYATI).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL gelir`}
+              highlight
             />
           ) : (
-            <StatCard label="Toprağa Atılan" value={`${fmt(result.fazlaEnerji)} kWh`} />
+            <StatCard label="Toprağa Atılan" value={<AnimNum value={result.fazlaEnerji} suffix=" kWh" />} />
           )}
         </div>
-      </Section>
+      </ResultSection>
 
       {/* Kesinti */}
-      <Section title="Kesinti Simülasyonu">
+      <ResultSection title="🚨 Kesinti Simülasyonu" delay={240}>
         {result.kesintiSuresi === 0 ? (
-          <p className="text-sm text-zinc-500 dark:text-zinc-400">Bugün elektrik kesintisi yaşanmadı.</p>
+          <p className="text-sm" style={{ color: "var(--primary)" }}>
+            ✅ Bugün elektrik kesintisi yaşanmadı.
+          </p>
         ) : (
           <>
             <div className="grid grid-cols-3 gap-3">
-              <StatCard label="Kesinti Süresi" value={`${result.kesintiSuresi} saat`} />
-              <StatCard label="YEYS Koruması" value={`${fmt(result.kurtarilanSaat, 1)} saat`} />
+              <StatCard label="Kesinti Süresi"  value={`${result.kesintiSuresi} saat`} />
+              <StatCard label="YEYS Koruması"   value={`${result.kurtarilanSaat.toFixed(1)} saat`} highlight />
               <StatCard
                 label="Blackout"
-                value={`${fmt(result.blackoutSaat, 1)} saat`}
+                value={<span style={{ color: result.blackoutSaat > 0 ? "var(--danger)" : "var(--primary)" }}>
+                  {result.blackoutSaat.toFixed(1)} saat
+                </span>}
               />
             </div>
             {result.blackoutSaat > 0 && (
-              <div className="rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-300 dark:border-red-700 p-3 text-sm text-red-700 dark:text-red-300">
-                Batarya tükendi: {fmt(result.blackoutSaat, 1)} saatlik BLACKOUT yaşandı.
+              <div className="rounded-xl px-4 py-3 text-sm font-medium"
+                   style={{ background: "#FEF2F2", border: "1.5px solid #FECACA", color: "#991B1B" }}>
+                Batarya tükendi — {result.blackoutSaat.toFixed(1)} saatlik BLACKOUT yaşandı.
               </div>
             )}
           </>
         )}
-      </Section>
+      </ResultSection>
 
       {/* Maliyet */}
-      <Section title="Maliyet Analizi">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-          <StatCard label="YEYS Olmadan" value={`${fmt(result.faturaSystemsiz)} TL/gün`} />
-          <StatCard label="YEYS İle" value={`${fmt(result.faturaSystemli)} TL/gün`} />
+      <ResultSection title="💰 Maliyet Analizi" delay={300}>
+        <div className="grid grid-cols-3 gap-3">
+          <StatCard
+            label="YEYS Olmadan"
+            value={<AnimNum value={result.faturaSystemsiz} suffix=" TL" />}
+            sub="fatura/gün"
+          />
+          <StatCard
+            label="YEYS İle"
+            value={<AnimNum value={result.faturaSystemli} suffix=" TL" />}
+            sub="fatura/gün"
+          />
           <StatCard
             label="Net Kazanç"
-            value={`${result.gunlukKazanc >= 0 ? "+" : ""}${fmt(result.gunlukKazanc)} TL/gün`}
+            value={
+              <span style={{ color: result.gunlukKazanc >= 0 ? "var(--primary)" : "var(--danger)" }}>
+                {result.gunlukKazanc >= 0 ? "+" : ""}<AnimNum value={Math.abs(result.gunlukKazanc)} suffix=" TL" />
+              </span>
+            }
+            sub="günlük"
+            highlight
           />
         </div>
-        <div className="overflow-x-auto">
+
+        {/* Table */}
+        <div className="rounded-2xl overflow-hidden" style={{ border: "1.5px solid var(--border)" }}>
           <table className="w-full text-sm">
-            <thead>
-              <tr className="text-xs text-zinc-400 uppercase">
-                <th className="text-left py-2 pr-4"></th>
-                <th className="text-right py-2 pr-4">YEYS Olmadan</th>
-                <th className="text-right py-2 pr-4">YEYS İle</th>
-                <th className="text-right py-2">Net Kazanç</th>
+            <thead style={{ background: "var(--bg-muted)" }}>
+              <tr>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--text-muted)" }}></th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--text-muted)" }}>YEYS Olmadan</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--text-muted)" }}>YEYS İle</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold uppercase tracking-wide"
+                    style={{ color: "var(--primary)" }}>Kazanç</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              <tr>
-                <td className="py-2 pr-4 text-zinc-600 dark:text-zinc-300">Günlük</td>
-                <td className="py-2 pr-4 text-right text-zinc-900 dark:text-zinc-100">{fmt(result.faturaSystemsiz)} TL</td>
-                <td className="py-2 pr-4 text-right text-zinc-900 dark:text-zinc-100">{fmt(result.faturaSystemli)} TL</td>
-                <td className="py-2 text-right font-medium text-emerald-600 dark:text-emerald-400">
-                  {result.gunlukKazanc >= 0 ? "+" : ""}{fmt(result.gunlukKazanc)} TL
-                </td>
-              </tr>
-              <tr>
-                <td className="py-2 pr-4 text-zinc-600 dark:text-zinc-300">Aylık</td>
-                <td className="py-2 pr-4 text-right text-zinc-900 dark:text-zinc-100">{fmt(result.aylikFaturaYok)} TL</td>
-                <td className="py-2 pr-4 text-right text-zinc-900 dark:text-zinc-100">{fmt(result.aylikFaturaYeys)} TL</td>
-                <td className="py-2 text-right font-medium text-emerald-600 dark:text-emerald-400">
-                  {result.aylikKazanc >= 0 ? "+" : ""}{fmt(result.aylikKazanc)} TL
-                </td>
-              </tr>
+            <tbody style={{ background: "var(--bg-card)" }}>
+              {[
+                { label: "Günlük",
+                  yok: result.faturaSystemsiz, yeys: result.faturaSystemli, net: result.gunlukKazanc },
+                { label: "Aylık",
+                  yok: result.aylikFaturaYok, yeys: result.aylikFaturaYeys, net: result.aylikKazanc },
+              ].map((row) => (
+                <tr key={row.label} style={{ borderTop: "1px solid var(--border)" }}>
+                  <td className="px-4 py-3 font-medium" style={{ color: "var(--text-muted)" }}>{row.label}</td>
+                  <td className="px-4 py-3 text-right" style={{ color: "var(--text-base)" }}>
+                    {row.yok.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL
+                  </td>
+                  <td className="px-4 py-3 text-right" style={{ color: "var(--text-base)" }}>
+                    {row.yeys.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL
+                  </td>
+                  <td className="px-4 py-3 text-right font-bold"
+                      style={{ color: row.net >= 0 ? "var(--primary)" : "var(--danger)" }}>
+                    {row.net >= 0 ? "+" : ""}{row.net.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
+
         {result.satisYap && result.satisGeliri > 0 && (
-          <p className="text-xs text-zinc-400">* Günlük kazanca {fmt(result.satisGeliri)} TL satış geliri dahildir.</p>
+          <p className="text-xs" style={{ color: "#6ee7b7" }}>
+            * Günlük kazanca {result.satisGeliri.toLocaleString("tr-TR", { minimumFractionDigits: 2 })} TL satış geliri dahildir.
+          </p>
         )}
-      </Section>
+      </ResultSection>
 
       {/* Yatırım */}
-      <Section title="Yatırım Analizi">
+      <ResultSection title="📈 Yatırım Analizi" delay={360}>
         <div className="space-y-2 text-sm">
-          <div className="flex justify-between py-1.5 border-b border-zinc-100 dark:border-zinc-800">
-            <span className="text-zinc-600 dark:text-zinc-400">Toplam Kurulum Maliyeti</span>
-            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-              {result.toplamMaliyet.toLocaleString("tr-TR")} TL
-            </span>
-          </div>
-          {Object.entries(result.sistemMaliyetiKalemler).map(([k, v]) => (
-            <div key={k} className="flex justify-between py-1 pl-4 text-zinc-500 dark:text-zinc-400">
-              <span>— {k}</span>
-              <span>{v.toLocaleString("tr-TR")} TL</span>
+          {/* Maliyet kalemleri */}
+          <div className="rounded-2xl p-4 space-y-2" style={{ background: "var(--bg-muted)" }}>
+            <div className="flex justify-between font-bold" style={{ color: "var(--text-base)" }}>
+              <span>Toplam Kurulum Maliyeti</span>
+              <AnimNum value={result.toplamMaliyet} suffix=" TL" dec={0} />
             </div>
-          ))}
-          <div className="flex justify-between py-1 pl-4 text-zinc-500 dark:text-zinc-400">
-            <span>— güneş paneli ({result.panelSayisi} × {PANEL_BIRIM_FIYATI.toLocaleString("tr-TR")} TL)</span>
-            <span>{(result.panelSayisi * PANEL_BIRIM_FIYATI).toLocaleString("tr-TR")} TL</span>
-          </div>
-          {result.turbineSayisi > 0 && (
-            <div className="flex justify-between py-1 pl-4 text-zinc-500 dark:text-zinc-400">
-              <span>— rüzgar türbini ({result.turbineSayisi} × {TURBINE_BIRIM_FIYATI.toLocaleString("tr-TR")} TL)</span>
-              <span>{(result.turbineSayisi * TURBINE_BIRIM_FIYATI).toLocaleString("tr-TR")} TL</span>
+            {Object.entries(result.sistemMaliyetiKalemler).map(([k, v]) => (
+              <div key={k} className="flex justify-between pl-4 text-xs" style={{ color: "var(--text-muted)" }}>
+                <span>— {k}</span>
+                <span>{v.toLocaleString("tr-TR")} TL</span>
+              </div>
+            ))}
+            <div className="flex justify-between pl-4 text-xs" style={{ color: "var(--text-muted)" }}>
+              <span>— güneş paneli ({result.panelSayisi} × {PANEL_BIRIM_FIYATI.toLocaleString("tr-TR")} TL)</span>
+              <span>{(result.panelSayisi * PANEL_BIRIM_FIYATI).toLocaleString("tr-TR")} TL</span>
             </div>
-          )}
-          <div className="flex justify-between py-1.5 border-t border-zinc-100 dark:border-zinc-800">
-            <span className="text-zinc-600 dark:text-zinc-400">Tahmini Yıllık Kazanç</span>
-            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
-              {fmt(result.yillikKazanc)} TL
-            </span>
+            {result.turbineSayisi > 0 && (
+              <div className="flex justify-between pl-4 text-xs" style={{ color: "var(--text-muted)" }}>
+                <span>— rüzgar türbini ({result.turbineSayisi} × {TURBINE_BIRIM_FIYATI.toLocaleString("tr-TR")} TL)</span>
+                <span>{(result.turbineSayisi * TURBINE_BIRIM_FIYATI).toLocaleString("tr-TR")} TL</span>
+              </div>
+            )}
           </div>
+
+          <div className="flex justify-between py-2" style={{ borderTop: "1px solid var(--border)" }}>
+            <span style={{ color: "var(--text-muted)" }}>Tahmini Yıllık Kazanç</span>
+            <strong style={{ color: "var(--primary)" }}>
+              <AnimNum value={result.yillikKazanc} suffix=" TL" />
+            </strong>
+          </div>
+
           {result.amortismanYil !== null ? (
             <>
-              <div className="flex justify-between py-1.5">
-                <span className="text-zinc-600 dark:text-zinc-400">Amortisman Süresi</span>
-                <span className="font-semibold text-zinc-900 dark:text-zinc-100">{fmt(result.amortismanYil, 1)} yıl</span>
+              <div className="flex justify-between py-2" style={{ borderTop: "1px solid var(--border)" }}>
+                <span style={{ color: "var(--text-muted)" }}>Amortisman Süresi</span>
+                <strong style={{ color: "var(--text-base)" }}>{result.amortismanYil.toFixed(1)} yıl</strong>
               </div>
-              <div className="flex justify-between py-1.5">
-                <span className="text-zinc-600 dark:text-zinc-400">Sistem Ömrü</span>
-                <span className="font-semibold text-zinc-900 dark:text-zinc-100">{SISTEM_OMRU} yıl</span>
+              <div className="flex justify-between py-2" style={{ borderTop: "1px solid var(--border)" }}>
+                <span style={{ color: "var(--text-muted)" }}>Sistem Ömrü</span>
+                <strong style={{ color: "var(--text-base)" }}>{SISTEM_OMRU} yıl</strong>
               </div>
-              <div className={`flex justify-between py-1.5 rounded-lg px-3 ${
-                result.omurBoyuKazanc >= 0
-                  ? "bg-emerald-50 dark:bg-emerald-950/30"
-                  : "bg-red-50 dark:bg-red-950/30"
-              }`}>
-                <span className="text-zinc-700 dark:text-zinc-300 font-medium">Ömür Boyu Net Kazanç</span>
-                <span className={`font-bold ${result.omurBoyuKazanc >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-red-500"}`}>
-                  {result.omurBoyuKazanc >= 0 ? "+" : ""}{fmt(result.omurBoyuKazanc)} TL
-                </span>
+              <div
+                className="flex items-center justify-between rounded-2xl px-4 py-3"
+                style={{
+                  background: result.omurBoyuKazanc >= 0 ? "var(--bg-muted)" : "#FEF2F2",
+                  border: `1.5px solid ${result.omurBoyuKazanc >= 0 ? "var(--border-strong)" : "#FECACA"}`,
+                }}
+              >
+                <span className="font-semibold" style={{ color: "var(--text-base)" }}>Ömür Boyu Net Kazanç</span>
+                <strong className="text-lg"
+                        style={{ color: result.omurBoyuKazanc >= 0 ? "var(--primary)" : "var(--danger)" }}>
+                  {result.omurBoyuKazanc >= 0 ? "+" : ""}
+                  <AnimNum value={Math.abs(result.omurBoyuKazanc)} suffix=" TL" dec={0} />
+                </strong>
               </div>
             </>
           ) : (
-            <p className="text-sm text-zinc-400">Amortisman hesaplanamadı (yıllık kazanç yok).</p>
+            <p className="text-xs py-2" style={{ color: "#6ee7b7" }}>
+              Amortisman hesaplanamadı (yıllık kazanç yok).
+            </p>
           )}
         </div>
-      </Section>
+      </ResultSection>
     </div>
   );
 }

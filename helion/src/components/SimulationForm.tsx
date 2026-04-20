@@ -1,10 +1,85 @@
 "use client";
 
-import { useState } from "react";
-import { SEHIRLER, PANEL_BIRIM_FIYATI, TURBINE_BIRIM_FIYATI, SISTEM_MALIYETI } from "@/lib/constants";
-import type { SimulationInput, SimulationResult as SimulationResultType } from "@/lib/types";
+import { useEffect, useRef, useState } from "react";
+import {
+  SEHIRLER, PANEL_BIRIM_FIYATI, TURBINE_BIRIM_FIYATI, SISTEM_MALIYETI,
+} from "@/lib/constants";
+import type { SimulationInput, SimulationResult as SimResultType } from "@/lib/types";
 import SimulationResultPanel from "./SimulationResult";
 
+// ── Entry animation hook ──────────────────────────────────────────
+function useEntryAnim(deps: unknown[] = []) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.classList.remove("visible");
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => el.classList.add("visible"));
+    });
+    return () => cancelAnimationFrame(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+  return ref;
+}
+
+// ── Input wrapper ─────────────────────────────────────────────────
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-sm font-semibold" style={{ color: "var(--text-muted)" }}>{label}</label>
+      {children}
+      {hint && <p className="text-xs" style={{ color: "#86efac" }}>{hint}</p>}
+    </div>
+  );
+}
+
+// ── Card section ──────────────────────────────────────────────────
+function FormSection({ title, children, delay = 0 }: { title: string; children: React.ReactNode; delay?: number }) {
+  const ref = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const id = window.setTimeout(() => {
+      requestAnimationFrame(() => el.classList.add("visible"));
+    }, delay);
+    return () => clearTimeout(id);
+  }, [delay]);
+
+  return (
+    <section ref={ref as React.RefObject<HTMLElement>} className="card anim-entry p-6 space-y-4">
+      <h2 className="section-label">{title}</h2>
+      {children}
+    </section>
+  );
+}
+
+// ── Toggle switch ─────────────────────────────────────────────────
+function Toggle({ checked, onChange, label }: { checked: boolean; onChange: () => void; label: string }) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer select-none">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={onChange}
+        className="relative w-12 h-6 rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+        style={{
+          background: checked ? "var(--primary)" : "var(--border-strong)",
+          boxShadow: checked ? "0 0 0 0 rgba(22,163,74,0)" : undefined,
+        }}
+      >
+        <span
+          className="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform duration-200"
+          style={{ transform: checked ? "translateX(24px)" : "translateX(0)" }}
+        />
+      </button>
+      <span className="text-sm font-medium" style={{ color: "var(--text-muted)" }}>{label}</span>
+    </label>
+  );
+}
+
+// ── Main Form ─────────────────────────────────────────────────────
 export default function SimulationForm() {
   const [form, setForm] = useState<SimulationInput>({
     sehir: SEHIRLER[0],
@@ -15,28 +90,44 @@ export default function SimulationForm() {
     turbineSayisi: 2,
     satisYap: true,
   });
-  const [result, setResult] = useState<SimulationResultType | null>(null);
+  const [result, setResult]   = useState<SimResultType | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
 
   const tahminiMaliyet =
     Object.values(SISTEM_MALIYETI).reduce((a, b) => a + b, 0) +
     form.panelSayisi * PANEL_BIRIM_FIYATI +
     form.turbineSayisi * TURBINE_BIRIM_FIYATI;
 
+  function set<K extends keyof SimulationInput>(key: K, val: SimulationInput[K]) {
+    setForm((p) => ({ ...p, [key]: val }));
+  }
+
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setResult(null);
+
+    // Button press animation via rAF
+    const btn = btnRef.current;
+    if (btn) {
+      btn.style.transform = "scale(0.97)";
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => { if (btn) btn.style.transform = ""; });
+      });
+    }
+
     try {
-      const res = await fetch("/api/simulate", {
+      const res  = await fetch("/api/simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Bilinmeyen hata");
-      setResult(data as SimulationResultType);
+      setResult(data as SimResultType);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Bağlantı hatası");
     } finally {
@@ -44,152 +135,145 @@ export default function SimulationForm() {
     }
   }
 
-  function set<K extends keyof SimulationInput>(key: K, value: SimulationInput[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  }
-
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-8">
-      <form onSubmit={handleSubmit} className="space-y-6">
+    <div className="w-full max-w-5xl mx-auto space-y-5">
+      <form onSubmit={handleSubmit} className="space-y-5">
+
         {/* Konum & Tarih */}
-        <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-4">
-            Konum &amp; Tarih
-          </h2>
+        <FormSection title="📍 Konum &amp; Tarih" delay={80}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">Şehir</label>
+            <Field label="Şehir">
               <select
                 value={form.sehir}
                 onChange={(e) => set("sehir", e.target.value)}
-                className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="field-input cursor-pointer"
               >
-                {SEHIRLER.map((s) => (
-                  <option key={s} value={s}>{s}</option>
-                ))}
+                {SEHIRLER.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                Mayıs Günü (1–31)
-              </label>
+            </Field>
+            <Field label="Mayıs Günü (1–31)">
               <input
                 type="number" min={1} max={31}
                 value={form.gun}
                 onChange={(e) => set("gun", Math.max(1, Math.min(31, Number(e.target.value))))}
-                className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="field-input"
               />
-            </div>
+            </Field>
           </div>
-        </section>
+        </FormSection>
 
         {/* Tüketim & Batarya */}
-        <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-4">
-            Tüketim &amp; Batarya
-          </h2>
+        <FormSection title="⚡ Tüketim &amp; Batarya" delay={160}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                Günlük Tüketim (kWh)
-              </label>
+            <Field label="Günlük Tüketim (kWh)">
               <input
-                type="number" min={0.1} step={0.1}
+                type="number"
                 value={form.tuketim}
                 onChange={(e) => set("tuketim", Number(e.target.value))}
-                className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="field-input"
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                Batarya Başlangıç Doluluk (%)
-              </label>
-              <div className="space-y-2">
-                <input
-                  type="range" min={0} max={100}
-                  value={form.bataryaYuzde}
-                  onChange={(e) => set("bataryaYuzde", Number(e.target.value))}
-                  className="w-full accent-emerald-500"
+            </Field>
+            <Field label={`Batarya Başlangıç Doluluk — %${form.bataryaYuzde}`}>
+              <input
+                type="range" min={0} max={100}
+                value={form.bataryaYuzde}
+                onChange={(e) => set("bataryaYuzde", Number(e.target.value))}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer mt-1"
+                style={{ accentColor: "var(--primary)" }}
+              />
+              <div className="w-full h-2 rounded-full overflow-hidden mt-1"
+                   style={{ background: "var(--bg-muted)" }}>
+                <div
+                  className="battery-fill"
+                  style={{ width: `${form.bataryaYuzde}%` }}
                 />
-                <span className="text-sm text-zinc-500 dark:text-zinc-400">{form.bataryaYuzde}%</span>
               </div>
-            </div>
+            </Field>
           </div>
-        </section>
+        </FormSection>
 
-        {/* Sistem Konfigürasyonu */}
-        <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-4">
-            Sistem Konfigürasyonu
-          </h2>
+        {/* Sistem */}
+        <FormSection title="🌿 Sistem Konfigürasyonu" delay={240}>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                Güneş Paneli Sayısı
-              </label>
+            <Field
+              label="Güneş Paneli Sayısı"
+              hint={`${PANEL_BIRIM_FIYATI.toLocaleString("tr-TR")} TL / panel`}
+            >
               <input
                 type="number" min={1}
                 value={form.panelSayisi}
                 onChange={(e) => set("panelSayisi", Math.max(1, Number(e.target.value)))}
-                className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="field-input"
               />
-              <p className="mt-1 text-xs text-zinc-400">{PANEL_BIRIM_FIYATI.toLocaleString("tr-TR")} TL/panel</p>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                Rüzgar Türbini Sayısı
-              </label>
+            </Field>
+            <Field
+              label="Rüzgar Türbini Sayısı"
+              hint={`${TURBINE_BIRIM_FIYATI.toLocaleString("tr-TR")} TL / türbin`}
+            >
               <input
                 type="number" min={0}
                 value={form.turbineSayisi}
                 onChange={(e) => set("turbineSayisi", Math.max(0, Number(e.target.value)))}
-                className="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 px-3 py-2 text-sm text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="field-input"
               />
-              <p className="mt-1 text-xs text-zinc-400">{TURBINE_BIRIM_FIYATI.toLocaleString("tr-TR")} TL/türbin</p>
-            </div>
+            </Field>
           </div>
-          <div className="mt-4 p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800 text-sm text-zinc-600 dark:text-zinc-300">
-            Tahmini Toplam Sistem Maliyeti:{" "}
-            <span className="font-semibold text-zinc-900 dark:text-zinc-100">
+
+          {/* Cost preview */}
+          <div
+            className="flex items-center justify-between rounded-xl px-4 py-3 text-sm font-medium"
+            style={{ background: "var(--bg-muted)", color: "var(--text-muted)" }}
+          >
+            <span>Tahmini Toplam Sistem Maliyeti</span>
+            <span className="font-bold text-base" style={{ color: "var(--primary)" }}>
               {tahminiMaliyet.toLocaleString("tr-TR")} TL
             </span>
           </div>
-        </section>
+        </FormSection>
 
-        {/* Enerji Satışı */}
-        <section className="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 p-6">
-          <h2 className="text-sm font-semibold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 mb-4">
-            Enerji Satışı
-          </h2>
-          <label className="flex items-center gap-3 cursor-pointer select-none">
-            <div
-              onClick={() => set("satisYap", !form.satisYap)}
-              className={`relative w-11 h-6 rounded-full transition-colors ${
-                form.satisYap ? "bg-emerald-500" : "bg-zinc-300 dark:bg-zinc-600"
-              }`}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${
-                  form.satisYap ? "translate-x-5" : "translate-x-0"
-                }`}
-              />
-            </div>
-            <span className="text-sm text-zinc-700 dark:text-zinc-300">
-              Fazla enerjiyi şebekeye sat (1.10 TL/kWh)
-            </span>
-          </label>
-        </section>
+        {/* Satış */}
+        <FormSection title="🔋 Enerji Satışı" delay={320}>
+          <Toggle
+            checked={form.satisYap}
+            onChange={() => set("satisYap", !form.satisYap)}
+            label="Fazla enerjiyi şebekeye sat (1.10 TL / kWh)"
+          />
+        </FormSection>
 
         {error && (
-          <p className="text-red-500 text-sm text-center">{error}</p>
+          <div
+            className="rounded-xl px-4 py-3 text-sm font-medium text-center"
+            style={{ background: "#FEF2F2", color: "#DC2626", border: "1.5px solid #FECACA" }}
+          >
+            {error}
+          </div>
         )}
 
+        {/* Submit */}
         <button
+          ref={btnRef}
           type="submit"
           disabled={loading}
-          className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-base transition-colors"
+          className="w-full py-4 rounded-2xl font-bold text-base text-white cursor-pointer transition-all duration-200 disabled:opacity-60"
+          style={{
+            background: loading
+              ? "var(--primary)"
+              : "linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 50%, var(--accent) 100%)",
+            boxShadow: "var(--shadow-md)",
+            transform: "translateY(0)",
+          }}
+          onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; }}
+          onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(0)"; }}
         >
-          {loading ? "Simüle Ediliyor..." : "Simülasyonu Başlat"}
+          {loading ? (
+            <span className="flex items-center justify-center gap-2">
+              <svg className="animate-spin w-5 h-5" viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="3" strokeOpacity="0.3" />
+                <path d="M12 2a10 10 0 0 1 10 10" stroke="white" strokeWidth="3" strokeLinecap="round" />
+              </svg>
+              Simüle Ediliyor…
+            </span>
+          ) : "🌱  Simülasyonu Başlat"}
         </button>
       </form>
 
