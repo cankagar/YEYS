@@ -1,7 +1,7 @@
 import { NextRequest } from "next/server";
-import { simulate } from "@/lib/engine";
-import { SEHIRLER } from "@/lib/constants";
-import type { SimulationInput } from "@/lib/types";
+import { simulate } from "@/libs/engine";
+import { SEHIRLER } from "@/libs/constants";
+import type { SimulationInput } from "@/libs/types";
 
 export async function POST(request: NextRequest) {
   let body: unknown;

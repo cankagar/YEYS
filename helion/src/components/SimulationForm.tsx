@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
   SEHIRLER, PANEL_BIRIM_FIYATI, TURBINE_BIRIM_FIYATI, SISTEM_MALIYETI,
-} from "@/lib/constants";
-import type { SimulationInput, SimulationResult as SimResultType } from "@/lib/types";
+} from "@/libs/constants";
+import type { SimulationInput, SimulationResult as SimResultType } from "@/libs/types";
 import SimulationResultPanel from "./SimulationResult";
 
 // ── Entry animation hook ──────────────────────────────────────────

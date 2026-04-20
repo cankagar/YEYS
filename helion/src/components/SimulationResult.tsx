@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { SimulationResult } from "@/lib/types";
+import type { SimulationResult } from "@/libs/types";
 import {
   BATARYA_KAPASITESI, GRID_FIYATI, SATIS_FIYATI,
   SISTEM_OMRU, PANEL_BIRIM_FIYATI, TURBINE_BIRIM_FIYATI,
-} from "@/lib/constants";
+} from "@/libs/constants";
 
 // ── rAF count-up hook ─────────────────────────────────────────────
 function useCountUp(target: number, duration = 900, decimals = 2) {
