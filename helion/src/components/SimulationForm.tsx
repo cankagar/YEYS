@@ -173,7 +173,7 @@ export default function SimulationForm() {
                 className="field-input"
               />
             </Field>
-            <Field label={`Batarya Başlangıç Doluluk — %${form.bataryaYuzde}`}>
+            <Field label={`Batarya Başlangıç Doluluk — %${form.bataryaYuzde} (10KWh)`}>
               <input
                 type="range" min={0} max={100}
                 value={form.bataryaYuzde}
