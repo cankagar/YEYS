@@ -3,13 +3,17 @@ import random
 # ==============================================================
 # SİSTEM SABİTLERİ
 # ==============================================================
-BATARYA_KAPASITESI = 10
-SISTEM_MALIYETI    = 400_000
-GRID_FIYATI        = 4
-SATIS_FIYATI       = 1.10
-SISTEM_OMRU        = 30
-PANEL_SAYISI       = 12
-DOGU_SEHIRLER      = {"ŞANLIURFA" , "ANTALYA"}
+BATARYA_KAPASITESI   = 10.0
+SISTEM_MALIYETI      = {
+    "altyapı": 100_000, 
+    "inverter": 300_000
+    }
+GRID_FIYATI          = 5
+SATIS_FIYATI         = 1.10
+SISTEM_OMRU          = 30
+PANEL_BIRIM_FIYATI   = 10_000
+TURBINE_BIRIM_FIYATI = 10_000
+DOGU_SEHIRLER        = {"VAN", "ŞANLIURFA"}
 
 # ==============================================================
 # BÖLÜM 1: VERİ TABLOSU
@@ -301,6 +305,24 @@ def veri_al():
             print("  Hata: Geçerli bir sayı girin.")
 
     while True:
+        try:
+            panel_sayisi = int(input("\nGüneş paneli sayısını girin: "))
+            if panel_sayisi > 0:
+                break
+            print("  Hata: Panel sayısı 0'dan büyük olmalıdır.")
+        except ValueError:
+            print("  Hata: Geçerli bir sayı girin.")
+
+    while True:
+        try:
+            turbine_sayisi = int(input("\nRüzgar türbini sayısını girin: "))
+            if turbine_sayisi >= 0:
+                break
+            print("  Hata: Türbin sayısı negatif olamaz.")
+        except ValueError:
+            print("  Hata: Geçerli bir sayı girin.")
+
+    while True:
         secim = input(
             f"\nFazla enerjiyi şebekeye satmak ister misiniz?"
             f"\n  ({SATIS_FIYATI:.2f} TL/kWh satış fiyatı)"
@@ -311,13 +333,13 @@ def veri_al():
             break
         print("  Hata: E veya H girin.")
 
-    return sehir, gun, tuketim, batarya_yuzde, satis_yap
+    return sehir, gun, tuketim, batarya_yuzde, panel_sayisi, turbine_sayisi, satis_yap
 
 
 # ==============================================================
 # BÖLÜM 3: ÜRETİM HESAPLAMA
 # ==============================================================
-def uretim_hesapla(sehir, gun):
+def uretim_hesapla(sehir, gun, panel_sayisi):
     ges_ort, _, _, res_ort, _, _ = URETIM_VERILERI[sehir][gun]
 
     overheat_panel_sayisi = 0
@@ -325,8 +347,8 @@ def uretim_hesapla(sehir, gun):
     # OVER HEAT: doğu şehirlerde %25 ihtimalle panel aşırı ısınması
     if sehir in DOGU_SEHIRLER:
         if random.random() < 0.25:
-            overheat_panel_sayisi = random.randint(1, 3)
-            kayip_oran = overheat_panel_sayisi / PANEL_SAYISI
+            overheat_panel_sayisi = random.randint(1, min(3, panel_sayisi))
+            kayip_oran = overheat_panel_sayisi / panel_sayisi
             ges_ort = round(ges_ort * (1 - kayip_oran), 2)
 
     # ±%3-4 rastgele sapma
@@ -414,11 +436,14 @@ def senaryo_belirle(toplam_uretim, tuketim, topraga_atilan, grid_kullanim, black
 # ==============================================================
 # BÖLÜM 7: EKONOMİK ANALİZ
 # ==============================================================
-def ekonomik_analiz(tuketim, grid_kullanim, fazla_enerji, satis_yap):
+def ekonomik_analiz(tuketim, grid_kullanim, fazla_enerji, satis_yap, panel_sayisi, turbine_sayisi):
+    toplam_maliyet    = (sum(SISTEM_MALIYETI.values())
+                         + panel_sayisi   * PANEL_BIRIM_FIYATI
+                         + turbine_sayisi * TURBINE_BIRIM_FIYATI)
+
     fatura_sistemsiz  = round(tuketim * GRID_FIYATI, 2)
     fatura_sistemli   = round(grid_kullanim * GRID_FIYATI, 2)
     satis_geliri      = round(fazla_enerji * SATIS_FIYATI, 2) if satis_yap else 0.0
-    # Günlük net kazanç: fatura tasarrufu + varsa satış geliri
     gunluk_kazanc     = round(fatura_sistemsiz - fatura_sistemli + satis_geliri, 2)
     aylik_kazanc      = round(gunluk_kazanc * 31, 2)
     aylik_fatura_yeys = round(fatura_sistemli * 31, 2)
@@ -426,15 +451,15 @@ def ekonomik_analiz(tuketim, grid_kullanim, fazla_enerji, satis_yap):
     yillik_kazanc     = round(gunluk_kazanc * 365, 2)
 
     if yillik_kazanc > 0:
-        amortisman_yil   = round(SISTEM_MALIYETI / yillik_kazanc, 1)
-        omur_boyu_kazanc = round(yillik_kazanc * SISTEM_OMRU - SISTEM_MALIYETI, 2)
+        amortisman_yil   = round(toplam_maliyet / yillik_kazanc, 1)
+        omur_boyu_kazanc = round(yillik_kazanc * SISTEM_OMRU - toplam_maliyet, 2)
     else:
         amortisman_yil   = None
-        omur_boyu_kazanc = round(-SISTEM_MALIYETI, 2)
+        omur_boyu_kazanc = round(-toplam_maliyet, 2)
 
     return (fatura_sistemsiz, fatura_sistemli, satis_geliri, gunluk_kazanc,
             aylik_fatura_yok, aylik_fatura_yeys, aylik_kazanc,
-            yillik_kazanc, amortisman_yil, omur_boyu_kazanc)
+            yillik_kazanc, amortisman_yil, omur_boyu_kazanc, toplam_maliyet)
 
 
 # ==============================================================
@@ -454,10 +479,11 @@ def senaryo_metni(senaryo_no, satis_yap):
 
 def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
                  ges, res, toplam_uretim, grid_kullanim, fazla_enerji, satis_yap,
+                 panel_sayisi, turbine_sayisi,
                  overheat_panel, kesinti_suresi, kurtarilan_saat, blackout_saat,
                  fatura_sistemsiz, fatura_sistemli, satis_geliri, gunluk_kazanc,
                  aylik_fatura_yok, aylik_fatura_yeys, aylik_kazanc,
-                 yillik_kazanc, amortisman_yil, omur_boyu_kazanc, senaryo_no):
+                 yillik_kazanc, amortisman_yil, omur_boyu_kazanc, toplam_maliyet, senaryo_no):
 
     denge          = round(toplam_uretim - tuketim, 3)
     batarya_degisim = round(batarya_son - batarya_bas, 3)
@@ -477,7 +503,7 @@ def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
     if overheat_panel > 0:
         print(f"\n  *** OVER HEAT UYARISI ***")
         print(f"  {overheat_panel} güneş paneli aşırı ısınma nedeniyle devre dışı kaldı!")
-        print(f"  GES üretimi {overheat_panel}/{PANEL_SAYISI} panel oranında düşürüldü.")
+        print(f"  GES üretimi {overheat_panel}/{panel_sayisi} panel oranında düşürüldü.")
         print()
 
     print("--- ÜRETİM BİLGİLERİ " + "-" * 43)
@@ -536,7 +562,12 @@ def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
         print(f"  Satış Geliri             : +{satis_geliri:.2f} TL/gün")
 
     print("\n--- YATIRIM ANALİZİ " + "-" * 44)
-    print(f"  Sistem Kurulum Maliyeti  : {SISTEM_MALIYETI:,} TL")
+    print(f"  Sistem Kurulum Maliyeti  : {toplam_maliyet:,} TL")
+    for kalem, tutar in SISTEM_MALIYETI.items():
+        print(f"    - {kalem:<18}: {tutar:,} TL")
+    print(f"    - {'güneş paneli':<18}: {panel_sayisi} x {PANEL_BIRIM_FIYATI:,} = {panel_sayisi * PANEL_BIRIM_FIYATI:,} TL")
+    if turbine_sayisi > 0:
+        print(f"    - {'rüzgar türbini':<18}: {turbine_sayisi} x {TURBINE_BIRIM_FIYATI:,} = {turbine_sayisi * TURBINE_BIRIM_FIYATI:,} TL")
     print(f"  Tahmini Yıllık Kazanç    : {yillik_kazanc:,.2f} TL")
     if amortisman_yil is not None:
         print(f"  Amortisman Süresi        : {amortisman_yil:.1f} yıl")
@@ -581,12 +612,12 @@ def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
 # ANA AKIŞ
 # ==============================================================
 def main():
-    sehir, gun, tuketim, batarya_yuzde, satis_yap = veri_al()
+    sehir, gun, tuketim, batarya_yuzde, panel_sayisi, turbine_sayisi, satis_yap = veri_al()
 
     batarya_bas = round(BATARYA_KAPASITESI * batarya_yuzde / 100, 2)
 
     # Üretimi hesapla (sapma + overheat)
-    ges, res, overheat_panel = uretim_hesapla(sehir, gun)
+    ges, res, overheat_panel = uretim_hesapla(sehir, gun, panel_sayisi)
     toplam_uretim = round(ges + res, 2)
 
     # Enerji dengesi
@@ -607,18 +638,19 @@ def main():
     # Ekonomik analiz
     (fatura_sistemsiz, fatura_sistemli, satis_geliri, gunluk_kazanc,
      aylik_fatura_yok, aylik_fatura_yeys, aylik_kazanc,
-     yillik_kazanc, amortisman_yil, omur_boyu_kazanc) = ekonomik_analiz(
-        tuketim, grid_kullanim, fazla_enerji, satis_yap
+     yillik_kazanc, amortisman_yil, omur_boyu_kazanc, toplam_maliyet) = ekonomik_analiz(
+        tuketim, grid_kullanim, fazla_enerji, satis_yap, panel_sayisi, turbine_sayisi
     )
 
     # Rapor
     rapor_goster(
         sehir, gun, tuketim, batarya_bas, batarya_son,
         ges, res, toplam_uretim, grid_kullanim, fazla_enerji, satis_yap,
+        panel_sayisi, turbine_sayisi,
         overheat_panel, kesinti_suresi, kurtarilan_saat, blackout_saat,
         fatura_sistemsiz, fatura_sistemli, satis_geliri, gunluk_kazanc,
         aylik_fatura_yok, aylik_fatura_yeys, aylik_kazanc,
-        yillik_kazanc, amortisman_yil, omur_boyu_kazanc, senaryo_no
+        yillik_kazanc, amortisman_yil, omur_boyu_kazanc, toplam_maliyet, senaryo_no
     )
 
 
