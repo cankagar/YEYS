@@ -303,6 +303,11 @@ export default function SimulationForm({
             setForm(p => ({ ...p, panelSayisi: panels, turbineSayisi: turbines }));
           }}
         />
+        <p className="text-xs font-medium px-1" style={{ color: "var(--text-muted)" }}>
+          💡 {form.tuketim > 20
+            ? "Tüketiminiz yüksek (>20 kWh) — Helion Pro (Enterprise) paketi önerilir."
+            : "Tüketiminiz düşük (≤20 kWh) — Helion Basic paketi yeterli olabilir."}
+        </p>
 
         {/* Cost preview */}
         <div className="flex items-center justify-between rounded-2xl px-5 py-3.5"

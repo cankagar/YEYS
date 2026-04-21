@@ -15,6 +15,11 @@ PANEL_BIRIM_FIYATI   = 10_000
 TURBINE_BIRIM_FIYATI = 10_000
 DOGU_SEHIRLER        = {"VAN", "ŞANLIURFA"}
 
+PAKETLER = {
+    "basic": {"ad": "Helion Basic",      "panel": 8,  "turbine": 0},
+    "pro":   {"ad": "Helion Pro (Enterprise)", "panel": 10, "turbine": 1},
+}
+
 # ==============================================================
 # BÖLÜM 1: VERİ TABLOSU
 # (GES_ort, GES_alt, GES_ust, RES_ort, RES_alt, RES_ust) kWh/gün
@@ -305,21 +310,22 @@ def veri_al():
         except ValueError:
             print("  Hata: Geçerli bir sayı girin.")
 
+    oneri = "pro" if tuketim > 20 else "basic"
+    oneri_adi = PAKETLER[oneri]["ad"]
+    print(f"\n  💡 İpucu: Tüketiminize göre '{oneri_adi}' paketi önerilir.")
+    print("\nSistem paketi seçin:")
+    print("  1. Helion Basic       — 8 güneş paneli")
+    print("  2. Helion Pro (Enterprise) — 10 güneş paneli + 1 rüzgar türbini")
     while True:
         try:
-            panel_sayisi = int(input("\nGüneş paneli sayısını girin: "))
-            if panel_sayisi > 0:
+            paket_secim = int(input("\nPaket numarasını seçin (1-2): "))
+            if paket_secim in (1, 2):
+                paket_key = "basic" if paket_secim == 1 else "pro"
+                panel_sayisi   = PAKETLER[paket_key]["panel"]
+                turbine_sayisi = PAKETLER[paket_key]["turbine"]
+                print(f"  → {PAKETLER[paket_key]['ad']} seçildi: {panel_sayisi} panel, {turbine_sayisi} türbin")
                 break
-            print("  Hata: Panel sayısı 0'dan büyük olmalıdır.")
-        except ValueError:
-            print("  Hata: Geçerli bir sayı girin.")
-
-    while True:
-        try:
-            turbine_sayisi = int(input("\nRüzgar türbini sayısını girin: "))
-            if turbine_sayisi >= 0:
-                break
-            print("  Hata: Türbin sayısı negatif olamaz.")
+            print("  Hata: 1 veya 2 girin.")
         except ValueError:
             print("  Hata: Geçerli bir sayı girin.")
 
