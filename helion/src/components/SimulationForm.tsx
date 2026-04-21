@@ -29,39 +29,73 @@ function MiniTurbine() {
   );
 }
 
-// ── Stepper ───────────────────────────────────────────────────────
-function Stepper({
-  label, value, onChange, min = 0, max = 999, hint,
-  preview,
-}: {
-  label: string; value: number; onChange: (v: number) => void;
-  min?: number; max?: number; hint?: string;
-  preview?: React.ReactNode;
-}) {
-  function dec() { if (value > min) onChange(value - 1); }
-  function inc() { if (value < max) onChange(value + 1); }
+// ── Packages ──────────────────────────────────────────────────────
+const PAKETLER = [
+  {
+    id: "basic" as const,
+    name: "Helion Basic",
+    badge: "Giriş Seviyesi",
+    panels: 8,
+    turbines: 0,
+    desc: "8 güneş paneli",
+  },
+  {
+    id: "pro" as const,
+    name: "Helion Pro",
+    badge: "İleri Seviye — Enterprise",
+    panels: 10,
+    turbines: 1,
+    desc: "10 güneş paneli + 1 rüzgar türbini",
+  },
+] as const;
+
+type PaketId = typeof PAKETLER[number]["id"];
+
+function PackagePicker({
+  value, onChange,
+}: { value: PaketId; onChange: (id: PaketId, panels: number, turbines: number) => void }) {
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-xs font-bold uppercase tracking-widest" style={{ color:"var(--text-muted)" }}>
-        {label}
+      <label className="text-xs font-bold uppercase tracking-widest" style={{ color: "var(--text-muted)" }}>
+        Sistem Paketi
       </label>
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={dec}
-          className="w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold transition-all duration-150 active:scale-90 select-none"
-          style={{ background:"var(--bg-muted)", color:"var(--primary)", border:"1.5px solid var(--border-strong)" }}>
-          −
-        </button>
-        <div className="flex-1 text-center">
-          <span className="text-4xl font-black tabular-nums" style={{ color:"var(--text-base)" }}>{value}</span>
-        </div>
-        <button type="button" onClick={inc}
-          className="w-11 h-11 rounded-xl flex items-center justify-center text-xl font-bold transition-all duration-150 active:scale-90 select-none"
-          style={{ background:"var(--primary)", color:"#fff", border:"1.5px solid var(--primary)" }}>
-          +
-        </button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {PAKETLER.map(p => {
+          const active = p.id === value;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => onChange(p.id, p.panels, p.turbines)}
+              className="flex flex-col gap-2 rounded-2xl p-4 text-left transition-all duration-150 active:scale-[0.98]"
+              style={{
+                background: active ? "var(--primary)" : "var(--bg-muted)",
+                border: `1.5px solid ${active ? "var(--primary)" : "var(--border-strong)"}`,
+                boxShadow: active ? "0 4px 16px rgba(22,163,74,0.3)" : "none",
+              }}
+            >
+              <span className="text-[10px] font-bold uppercase tracking-widest"
+                    style={{ color: active ? "rgba(255,255,255,0.75)" : "var(--text-muted)" }}>
+                {p.badge}
+              </span>
+              <span className="text-base font-black" style={{ color: active ? "#fff" : "var(--text-base)" }}>
+                {p.name}
+              </span>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {Array(p.panels).fill(null).map((_, i) => (
+                  <span key={i}><MiniPanel /></span>
+                ))}
+                {p.turbines > 0 && Array(p.turbines).fill(null).map((_, i) => (
+                  <span key={`t${i}`}><MiniTurbine /></span>
+                ))}
+              </div>
+              <span className="text-xs font-medium mt-1" style={{ color: active ? "rgba(255,255,255,0.85)" : "#86efac" }}>
+                {p.desc}
+              </span>
+            </button>
+          );
+        })}
       </div>
-      {hint && <p className="text-xs text-center" style={{ color:"#86efac" }}>{hint}</p>}
-      {preview}
     </div>
   );
 }
@@ -136,8 +170,11 @@ function BatterySlider({
       </div>
       <input type="range" min={0} max={100} value={value}
         onChange={e => onChange(Number(e.target.value))}
-        className="w-full h-2 rounded-full appearance-none cursor-pointer"
-        style={{ accentColor: color }}
+        className="w-full h-3 rounded-full appearance-none cursor-pointer"
+        style={{
+          accentColor: color,
+          background: `linear-gradient(to right, ${color} ${value}%, var(--border-strong) ${value}%)`,
+        }}
       />
     </div>
   );
@@ -172,13 +209,14 @@ function Section({ title, icon, children, delay = 0 }: {
 export default function SimulationForm({
   onResult,
 }: { onResult: (r: SimResultType) => void }) {
+  const [paket, setPaket] = useState<PaketId>("basic");
   const [form, setForm] = useState<SimulationInput>({
     sehir: SEHIRLER[0],
     gun: 15,
     tuketim: 25,
     bataryaYuzde: 50,
-    panelSayisi: 12,
-    turbineSayisi: 2,
+    panelSayisi: PAKETLER[0].panels,
+    turbineSayisi: PAKETLER[0].turbines,
     satisYap: true,
   });
   const [loading, setLoading] = useState(false);
@@ -217,42 +255,6 @@ export default function SimulationForm({
       setLoading(false);
     }
   }
-
-  /* Panel preview icons */
-  const panelIcons = (
-    <div className="flex flex-wrap gap-1.5 pt-1 min-h-8">
-      {Array(Math.min(form.panelSayisi, 16)).fill(null).map((_, i) => (
-        <span key={i} style={{ animation: `mini-pop 0.25s ${i * 0.03}s both` }}>
-          <MiniPanel/>
-        </span>
-      ))}
-      {form.panelSayisi > 16 && (
-        <span className="text-xs font-bold px-2 py-0.5 rounded-full self-center"
-          style={{ background:"var(--bg-muted)", color:"var(--primary)" }}>
-          +{form.panelSayisi - 16}
-        </span>
-      )}
-    </div>
-  );
-
-  /* Turbine preview icons */
-  const turbineIcons = form.turbineSayisi > 0 ? (
-    <div className="flex flex-wrap gap-2 pt-1 min-h-8">
-      {Array(Math.min(form.turbineSayisi, 8)).fill(null).map((_, i) => (
-        <span key={i} style={{ animation: `mini-pop 0.25s ${i * 0.06}s both` }}>
-          <MiniTurbine/>
-        </span>
-      ))}
-      {form.turbineSayisi > 8 && (
-        <span className="text-xs font-bold px-2 py-0.5 rounded-full self-center"
-          style={{ background:"var(--bg-muted)", color:"var(--primary)" }}>
-          +{form.turbineSayisi - 8}
-        </span>
-      )}
-    </div>
-  ) : (
-    <p className="text-xs pt-1" style={{ color:"#86efac" }}>Türbin eklenmedi</p>
-  );
 
   return (
     <form onSubmit={handleSubmit} className="w-full space-y-5">
@@ -294,24 +296,13 @@ export default function SimulationForm({
 
       {/* ── Sistem Konfigürasyonu ── */}
       <Section title="Sistem Konfigürasyonu" icon="🌿" delay={240}>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          <Stepper
-            label="Güneş Paneli Sayısı"
-            value={form.panelSayisi}
-            onChange={v => set("panelSayisi", v)}
-            min={1}
-            hint={`${PANEL_BIRIM_FIYATI.toLocaleString("tr-TR")} TL / panel`}
-            preview={panelIcons}
-          />
-          <Stepper
-            label="Rüzgar Türbini Sayısı"
-            value={form.turbineSayisi}
-            onChange={v => set("turbineSayisi", v)}
-            min={0}
-            hint={`${TURBINE_BIRIM_FIYATI.toLocaleString("tr-TR")} TL / türbin`}
-            preview={turbineIcons}
-          />
-        </div>
+        <PackagePicker
+          value={paket}
+          onChange={(id, panels, turbines) => {
+            setPaket(id);
+            setForm(p => ({ ...p, panelSayisi: panels, turbineSayisi: turbines }));
+          }}
+        />
 
         {/* Cost preview */}
         <div className="flex items-center justify-between rounded-2xl px-5 py-3.5"
