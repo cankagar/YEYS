@@ -5,7 +5,8 @@ import {
   SISTEM_OMRU,
   PANEL_BIRIM_FIYATI,
   TURBINE_BIRIM_FIYATI,
-  SISTEM_MALIYETI,
+  SOLAR_MALIYETI,
+  WIND_MALIYETI,
   DOGU_SEHIRLER,
   URETIM_VERILERI,
 } from "./constants";
@@ -138,6 +139,7 @@ function ekonomikAnaliz(
   turbineSayisi: number
 ): {
   toplamMaliyet: number;
+  sistemMaliyetiKalemler: Record<string, number>;
   faturaSystemsiz: number;
   faturaSystemli: number;
   satisGeliri: number;
@@ -149,8 +151,12 @@ function ekonomikAnaliz(
   amortismanYil: number | null;
   omurBoyuKazanc: number;
 } {
+  const sistemMaliyetiKalemler: Record<string, number> = turbineSayisi > 0
+    ? { ...SOLAR_MALIYETI, ...WIND_MALIYETI }
+    : { ...SOLAR_MALIYETI };
+
   const toplamMaliyet =
-    Object.values(SISTEM_MALIYETI).reduce((a, b) => a + b, 0) +
+    Object.values(sistemMaliyetiKalemler).reduce((a, b) => a + b, 0) +
     panelSayisi * PANEL_BIRIM_FIYATI +
     turbineSayisi * TURBINE_BIRIM_FIYATI;
 
@@ -175,6 +181,7 @@ function ekonomikAnaliz(
 
   return {
     toplamMaliyet,
+    sistemMaliyetiKalemler,
     faturaSystemsiz,
     faturaSystemli,
     satisGeliri,
@@ -238,6 +245,6 @@ export function simulate(input: SimulationInput): SimulationResult {
     amortismanYil: ekonomi.amortismanYil,
     omurBoyuKazanc: ekonomi.omurBoyuKazanc,
     toplamMaliyet: ekonomi.toplamMaliyet,
-    sistemMaliyetiKalemler: { ...SISTEM_MALIYETI },
+    sistemMaliyetiKalemler: ekonomi.sistemMaliyetiKalemler,
   };
 }

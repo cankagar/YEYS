@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
-  SEHIRLER, PANEL_BIRIM_FIYATI, TURBINE_BIRIM_FIYATI, SISTEM_MALIYETI,
+  SEHIRLER, PANEL_BIRIM_FIYATI, TURBINE_BIRIM_FIYATI,
+  SOLAR_MALIYETI, WIND_MALIYETI,
 } from "@/libs/constants";
 import type { SimulationInput, SimulationResult as SimResultType } from "@/libs/types";
 
@@ -224,8 +225,11 @@ export default function SimulationForm({
   const [error,   setError]   = useState<string | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
 
+  const sistemKalemler = form.turbineSayisi > 0
+    ? { ...SOLAR_MALIYETI, ...WIND_MALIYETI }
+    : { ...SOLAR_MALIYETI };
   const totalCost =
-    Object.values(SISTEM_MALIYETI).reduce((a, b) => a + b, 0) +
+    Object.values(sistemKalemler).reduce((a, b) => a + b, 0) +
     form.panelSayisi * PANEL_BIRIM_FIYATI +
     form.turbineSayisi * TURBINE_BIRIM_FIYATI;
 
@@ -320,16 +324,6 @@ export default function SimulationForm({
             : "Tüketiminiz düşük (≤20 kWh) — Helion Basic paketi yeterli olabilir."}
         </p>
 
-        {/* Cost preview */}
-        <div className="flex items-center justify-between rounded-2xl px-5 py-3.5"
-             style={{ background:"var(--bg-muted)", border:"1.5px solid var(--border-strong)" }}>
-          <span className="text-sm font-semibold" style={{ color:"var(--text-muted)" }}>
-            Tahmini Sistem Maliyeti
-          </span>
-          <span className="text-lg font-black tabular-nums" style={{ color:"var(--primary)" }}>
-            {totalCost.toLocaleString("tr-TR")} TL
-          </span>
-        </div>
       </Section>
 
       {/* ── Enerji Satışı ── */}

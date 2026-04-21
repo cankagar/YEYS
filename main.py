@@ -4,12 +4,15 @@ import random
 # SİSTEM SABİTLERİ
 # ==============================================================
 BATARYA_KAPASITESI   = 10.0
-SISTEM_MALIYETI      = {
-    "batarya": 50_000,
-    "hybrid_inverter" : 40_000,
-    "wind_controller" : 10_000,
-    "dump_load" : 6_000
-    }
+SOLAR_MALIYETI       = {
+    "batarya":         50_000,
+    "hybrid_inverter": 40_000,
+}
+WIND_MALIYETI        = {
+    "wind_controller": 10_000,
+    "dump_load":        6_000,
+}
+SISTEM_MALIYETI      = {**SOLAR_MALIYETI, **WIND_MALIYETI}  # geriye dönük uyumluluk
 GRID_FIYATI          = 5
 SATIS_FIYATI         = 1.10
 SISTEM_OMRU          = 30
@@ -450,7 +453,8 @@ def senaryo_belirle(toplam_uretim, tuketim, topraga_atilan, grid_kullanim, black
 # BÖLÜM 7: EKONOMİK ANALİZ
 # ==============================================================
 def ekonomik_analiz(tuketim, grid_kullanim, fazla_enerji, satis_yap, panel_sayisi, turbine_sayisi):
-    toplam_maliyet    = (sum(SISTEM_MALIYETI.values())
+    sistem_kalemler   = {**SOLAR_MALIYETI, **(WIND_MALIYETI if turbine_sayisi > 0 else {})}
+    toplam_maliyet    = (sum(sistem_kalemler.values())
                          + panel_sayisi   * PANEL_BIRIM_FIYATI
                          + turbine_sayisi * TURBINE_BIRIM_FIYATI)
 
@@ -574,9 +578,10 @@ def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
     if satis_yap and satis_geliri > 0:
         print(f"  Satış Geliri             : +{satis_geliri:.2f} TL/gün")
 
+    sistem_kalemler = {**SOLAR_MALIYETI, **(WIND_MALIYETI if turbine_sayisi > 0 else {})}
     print("\n--- YATIRIM ANALİZİ " + "-" * 44)
     print(f"  Sistem Kurulum Maliyeti  : {toplam_maliyet:,} TL")
-    for kalem, tutar in SISTEM_MALIYETI.items():
+    for kalem, tutar in sistem_kalemler.items():
         print(f"    - {kalem:<18}: {tutar:,} TL")
     print(f"    - {'güneş paneli':<18}: {panel_sayisi} x {PANEL_BIRIM_FIYATI:,} = {panel_sayisi * PANEL_BIRIM_FIYATI:,} TL")
     if turbine_sayisi > 0:
