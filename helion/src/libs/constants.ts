@@ -2,11 +2,13 @@ export const BATARYA_KAPASITESI = 10.0;
 export const GRID_FIYATI = 5;
 export const SATIS_FIYATI = 1.10;
 export const SISTEM_OMRU = 30;
-export const PANEL_BIRIM_FIYATI = 10_000;
-export const TURBINE_BIRIM_FIYATI = 10_000;
+export const PANEL_BIRIM_FIYATI = 5_000;
+export const TURBINE_BIRIM_FIYATI = 80_000;
 export const SISTEM_MALIYETI: Record<string, number> = {
-  altyapı: 100_000,
-  inverter: 300_000,
+batarya: 50_000,
+hybrid_inverter : 40_000,
+wind_controller : 10_000,
+dump_load : 6_000
 };
 export const DOGU_SEHIRLER = new Set(["VAN", "ŞANLIURFA"]);
 
