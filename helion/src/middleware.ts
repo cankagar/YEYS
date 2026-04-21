@@ -21,8 +21,9 @@ export const config = {
      * - api (API rotaları)
      * - _next/static (statik dosyalar)
      * - _next/image (resim optimizasyon dosyaları)
-     * - favicon.ico (logo dosyası)
+     * - favicon.ico
+     * - public klasöründeki statik dosyalar (png, jpg, svg, vb.)
      */
-    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:png|jpg|jpeg|gif|svg|ico|webp|avif)).*)',
   ],
 }

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import SimulationForm from "@/components/SimulationForm";
 import NatureCanvas   from "@/components/NatureCanvas";
 import EnergyScene    from "@/components/EnergyScene";
+import Image from "next/image";
 import type { SimulationResult } from "@/libs/types";
 
 export default function Home() {
@@ -48,18 +49,27 @@ export default function Home() {
               borderBottom:"1.5px solid var(--border)", zIndex:50,
             }}
           >
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-4">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center gap-3">
               <div
-                className="flex items-center justify-center w-11 h-11 rounded-2xl text-white font-bold text-lg select-none"
+                className="flex items-center justify-center rounded-2xl overflow-hidden flex-shrink-0"
                 style={{
-                  background:"linear-gradient(135deg, #4ade80, var(--primary), var(--accent))",
-                  boxShadow:"0 4px 14px rgba(22,163,74,0.35)",
+                  width: 52, height: 52,
+                  background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)",
+                  boxShadow: "0 4px 18px rgba(14,165,233,0.25), 0 1px 4px rgba(0,0,0,0.15)",
+                  padding: 4,
                 }}
               >
-                Y
+                <Image
+                  src="/logo.png"
+                  alt="YEYS Logo"
+                  width={44}
+                  height={44}
+                  unoptimized
+                  style={{ width: 44, height: 44, objectFit: "contain" }}
+                />
               </div>
               <div className="flex-1">
-                <h1 className="text-base font-bold leading-none" style={{ color:"var(--text-base)" }}>YEYS</h1>
+                <h1 className="text-base font-bold leading-none tracking-wide" style={{ color:"var(--text-base)" }}>YEYS</h1>
                 <p className="text-xs mt-0.5" style={{ color:"var(--text-muted)" }}>Yenilenebilir Enerji Yönetim Sistemi</p>
               </div>
               <span
