@@ -17,7 +17,7 @@ export const SISTEM_MALIYETI: Record<string, number> = {
   ...SOLAR_MALIYETI,
   ...WIND_MALIYETI,
 };
-export const DOGU_SEHIRLER = new Set(["VAN", "ŞANLIURFA"]);
+export const DOGU_SEHIRLER = new Set(["ANTALYA", "ŞANLIURFA"]);
 
 // (GES_ort, GES_alt, GES_ust, RES_ort, RES_alt, RES_ust) kWh/gün — 1 panel / 1 türbin başına
 export type GunUretim = [number, number, number, number, number, number];

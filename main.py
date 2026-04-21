@@ -18,7 +18,7 @@ SATIS_FIYATI         = 1.10
 SISTEM_OMRU          = 30
 PANEL_BIRIM_FIYATI   = 5_000 
 TURBINE_BIRIM_FIYATI = 80_000
-OVER_HEAT        = {"VAN", "ŞANLIURFA"}
+OVER_HEAT        = {"ANTALYA", "ŞANLIURFA"}
 
 PAKETLER = {
     "basic": {"ad": "Helion Basic",      "panel": 8,  "turbine": 0},
