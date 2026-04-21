@@ -5,15 +5,17 @@ import random
 # ==============================================================
 BATARYA_KAPASITESI   = 10.0
 SISTEM_MALIYETI      = {
-    "altyapı": 100_000, 
-    "inverter": 300_000
+    "batarya": 50_000,
+    "hybrid_inverter" : 40_000,
+    "wind_controller" : 10_000,
+    "dump_load" : 6_000
     }
 GRID_FIYATI          = 5
 SATIS_FIYATI         = 1.10
 SISTEM_OMRU          = 30
-PANEL_BIRIM_FIYATI   = 10_000
-TURBINE_BIRIM_FIYATI = 10_000
-DOGU_SEHIRLER        = {"VAN", "ŞANLIURFA"}
+PANEL_BIRIM_FIYATI   = 5_000
+TURBINE_BIRIM_FIYATI = 80_000
+OVER_HEAT        = {"VAN", "ŞANLIURFA"}
 
 PAKETLER = {
     "basic": {"ad": "Helion Basic",      "panel": 8,  "turbine": 0},
@@ -356,7 +358,7 @@ def uretim_hesapla(sehir, gun, panel_sayisi, turbine_sayisi):
     overheat_panel_sayisi = 0
 
     # OVER HEAT: doğu şehirlerde %25 ihtimalle panel aşırı ısınması
-    if sehir in DOGU_SEHIRLER:
+    if sehir in OVER_HEAT:
         if random.random() < 0.25:
             overheat_panel_sayisi = random.randint(1, min(3, panel_sayisi))
             kayip_oran = overheat_panel_sayisi / panel_sayisi
