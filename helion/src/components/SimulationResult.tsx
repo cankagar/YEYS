@@ -351,6 +351,30 @@ export default function SimulationResult({ result }: { result: SimulationResult 
         )}
       </ResultSection>
 
+      {/* Çevre */}
+      <ResultSection title="🌱 Çevresel Etki" delay={330}>
+        {(() => {
+          const aylikUretim  = result.toplamUretim * 30;
+          const co2Kg        = aylikUretim * 0.5;
+          const agacSayisi   = aylikUretim / 40;
+          return (
+            <div className="grid grid-cols-2 gap-3">
+              <StatCard
+                label="Aylık CO₂ Tasarrufu"
+                value={<AnimNum value={co2Kg} suffix=" kg" dec={1} />}
+                sub={`${aylikUretim.toLocaleString("tr-TR", { maximumFractionDigits: 0 })} kWh yenilenebilir`}
+                highlight
+              />
+              <StatCard
+                label="Kurtarılan Ağaç Eşdeğeri"
+                value={<AnimNum value={agacSayisi} suffix=" ağaç" dec={1} />}
+                sub="aylık bazda"
+              />
+            </div>
+          );
+        })()}
+      </ResultSection>
+
       {/* Yatırım */}
       <ResultSection title="📈 Yatırım Analizi" delay={360}>
         <div className="space-y-2 text-sm">
