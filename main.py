@@ -618,6 +618,19 @@ def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
 
     print("=" * 65)
 
+    # --- ÇEVRESEL ETKİ ---
+    aylik_uretim = round(toplam_uretim * 30, 2)
+    co2_kg       = round(aylik_uretim * 0.5, 1)
+    agac_sayisi  = round(aylik_uretim / 40, 1)
+
+    print("\n" + "=" * 65)
+    print("  ÇEVRESEL ETKİ (AYLIK BAZDA)")
+    print("=" * 65)
+    print(f"  Aylık Yenilenebilir Üretim  : {aylik_uretim:.2f} kWh")
+    print(f"  Aylık CO₂ Tasarrufu         : {co2_kg} kg")
+    print(f"  Kurtarılan Ağaç Eşdeğeri    : {agac_sayisi} ağaç")
+    print("=" * 65)
+
 
 # ==============================================================
 # ANA AKIŞ
