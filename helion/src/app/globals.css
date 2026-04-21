@@ -110,6 +110,50 @@ body {
 }
 .pulse-ring { animation: ring-pulse 2s ease infinite; }
 
+/* ── Energy scene animations ── */
+@keyframes sun-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes sun-bob {
+  0%, 100% { transform: translateY(0px); }
+  50%       { transform: translateY(-12px); }
+}
+@keyframes cloud-drift-1 {
+  from { transform: translateX(-220px); }
+  to   { transform: translateX(calc(100vw + 220px)); }
+}
+@keyframes cloud-drift-2 {
+  from { transform: translateX(-160px); }
+  to   { transform: translateX(calc(100vw + 160px)); }
+}
+@keyframes float-energy {
+  0%   { opacity: 1; transform: translateY(0)    scale(1); }
+  100% { opacity: 0; transform: translateY(-90px) scale(0.5); }
+}
+@keyframes score-pop {
+  0%   { opacity: 0; transform: scale(0.4) translateY(8px); }
+  65%  { transform: scale(1.08) translateY(-3px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes hill-rise {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes bird-fly {
+  0%   { transform: translateX(0)    translateY(0); }
+  25%  { transform: translateX(25vw) translateY(-18px); }
+  50%  { transform: translateX(50vw) translateY(2px); }
+  75%  { transform: translateX(75vw) translateY(-12px); }
+  100% { transform: translateX(110vw) translateY(0); }
+}
+
+/* ── Stepper bounce ── */
+@keyframes mini-pop {
+  0%   { opacity: 0; transform: scale(0.2); }
+  70%  { transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
 /* ── prefers-reduced-motion ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
