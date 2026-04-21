@@ -210,6 +210,7 @@ export default function SimulationForm({
   onResult,
 }: { onResult: (r: SimResultType) => void }) {
   const [paket, setPaket] = useState<PaketId>("basic");
+  const [tuketimStr, setTuketimStr] = useState("25");
   const [form, setForm] = useState<SimulationInput>({
     sehir: SEHIRLER[0],
     gun: 15,
@@ -284,8 +285,18 @@ export default function SimulationForm({
             </label>
             <input
               type="number" min={1} max={500}
-              value={form.tuketim}
-              onChange={e => set("tuketim", Math.max(1, Number(e.target.value)))}
+              value={tuketimStr}
+              onChange={e => {
+                setTuketimStr(e.target.value);
+                const n = Number(e.target.value);
+                if (e.target.value !== "" && n >= 1) set("tuketim", n);
+              }}
+              onBlur={() => {
+                const n = Number(tuketimStr);
+                const clamped = (!tuketimStr || n < 1) ? 1 : n;
+                setTuketimStr(String(clamped));
+                set("tuketim", clamped);
+              }}
               className="field-input"
             />
             <p className="text-xs" style={{ color:"#86efac" }}>Ortalama ev tüketimi 25-40 kWh/gün</p>
