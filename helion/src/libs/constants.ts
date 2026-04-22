@@ -10,7 +10,7 @@ export const SOLAR_MALIYETI: Record<string, number> = {
 };
 export const WIND_MALIYETI: Record<string, number> = {
   wind_controller: 10_000,
-  dump_load: 6_000,
+  dump_load: 6_000, 
 };
 // Geriye dönük uyumluluk için tüm kalemler
 export const SISTEM_MALIYETI: Record<string, number> = {
