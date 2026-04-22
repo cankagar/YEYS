@@ -5,12 +5,14 @@ import { motion } from "framer-motion";
 import SimulationForm from "@/components/SimulationForm";
 import NatureCanvas   from "@/components/NatureCanvas";
 import EnergyScene    from "@/components/EnergyScene";
+import WelcomeModal   from "@/components/WelcomeModal";
 import Image from "next/image";
 import type { SimulationResult } from "@/libs/types";
 
 export default function Home() {
-  const [result,    setResult]    = useState<SimulationResult | null>(null);
-  const [showScene, setShowScene] = useState(false);
+  const [result,      setResult]      = useState<SimulationResult | null>(null);
+  const [showScene,   setShowScene]   = useState(false);
+  const [showModal,   setShowModal]   = useState(true);
 
   function handleResult(r: SimulationResult) {
     setResult(r);
@@ -25,6 +27,8 @@ export default function Home() {
 
   return (
     <div style={{ position:"relative", overflow:"hidden", height:"100dvh" }}>
+
+      <WelcomeModal open={showModal} onClose={() => setShowModal(false)} />
 
       {/* ── Page 1: Form (slides left) ── */}
       <motion.div
@@ -78,6 +82,19 @@ export default function Home() {
               >
                 🌱 Doğa Dostu
               </span>
+              <button
+                onClick={() => setShowModal(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full"
+                style={{
+                  background:"var(--bg-muted)",
+                  border:"1.5px solid var(--border-strong)",
+                  color:"var(--primary)",
+                  cursor:"pointer",
+                  flexShrink: 0,
+                }}
+              >
+                ℹ️ Hakkında
+              </button>
             </div>
           </header>
 
