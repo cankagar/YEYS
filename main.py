@@ -635,7 +635,7 @@ def rapor_goster(sehir, gun, tuketim, batarya_bas, batarya_son,
     print("=" * 65)
     print(f"  Aylık Yenilenebilir Üretim  : {aylik_uretim:.2f} kWh")
     print(f"  Aylık CO₂ Tasarrufu         : {co2_kg} kg")
-    print(f"  Kurtarılan Ağaç Eşdeğeri    : {agac_sayisi} ağaç")
+    print(f"  Korunan Ağaç Eşdeğeri    : {agac_sayisi} ağaç")
     print("=" * 65)
 
 
