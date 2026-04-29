@@ -1,7 +1,7 @@
 import random
- 
+
 # ==============================================================
-# SİSTEM SABİTLERİ
+# TALHA – SABİTLER VE VERİ TABLOSU
 # ==============================================================
 BATARYA_KAPASITESI   = 10.0
 SOLAR_MALIYETI       = {
@@ -26,7 +26,7 @@ PAKETLER = {
 }
 
 # ==============================================================
-# BÖLÜM 1: VERİ TABLOSU
+# TALHA – VERİ TABLOSU
 # (GES_ort, GES_alt, GES_ust, RES_ort, RES_alt, RES_ust) kWh/gün
 # ==============================================================
 
@@ -265,7 +265,7 @@ URETIM_VERILERI = {
 }
 
 # ==============================================================
-# BÖLÜM 2: GİRİŞ SİSTEMİ
+# ALİ – GİRİŞ SİSTEMİ
 # ==============================================================
 def veri_al():
     print("\n" + "=" * 65)
@@ -349,7 +349,7 @@ def veri_al():
 
 
 # ==============================================================
-# BÖLÜM 3: ÜRETİM HESAPLAMA
+# YAVUZ – ÜRETİM HESAPLAMA
 # ==============================================================
 def uretim_hesapla(sehir, gun, panel_sayisi, turbine_sayisi):
     ges_birim, _, _, res_birim, _, _ = URETIM_VERILERI[sehir][gun]
@@ -377,7 +377,7 @@ def uretim_hesapla(sehir, gun, panel_sayisi, turbine_sayisi):
 
 
 # ==============================================================
-# BÖLÜM 4: ENERJİ DENGESİ (ANA AKIŞ)
+# BURAK – ENERJİ DENGESİ (ANA AKIŞ)
 # ==============================================================
 def enerji_dengesi_hesapla(ges, res, tuketim, batarya):
     toplam_uretim = ges + res
@@ -406,7 +406,7 @@ def enerji_dengesi_hesapla(ges, res, tuketim, batarya):
 
 
 # ==============================================================
-# BÖLÜM 5: KESİNTİ SİMÜLASYONU
+# BURAK – KESİNTİ SİMÜLASYONU
 # ==============================================================
 def kesinti_simulasyonu(tuketim, toplam_uretim, batarya_mevcut):
     kesinti_suresi = random.randint(0, 5)
@@ -430,7 +430,7 @@ def kesinti_simulasyonu(tuketim, toplam_uretim, batarya_mevcut):
 
 
 # ==============================================================
-# BÖLÜM 6: SENARYO BELİRLEME
+# CnKGR – SENARYO BELİRLEME
 # ==============================================================
 def senaryo_belirle(toplam_uretim, tuketim, topraga_atilan, grid_kullanim, blackout_saat):
     denge = toplam_uretim - tuketim
@@ -450,7 +450,7 @@ def senaryo_belirle(toplam_uretim, tuketim, topraga_atilan, grid_kullanim, black
 
 
 # ==============================================================
-# BÖLÜM 7: EKONOMİK ANALİZ
+# CnKGR – EKONOMİK ANALİZ
 # ==============================================================
 def ekonomik_analiz(tuketim, grid_kullanim, fazla_enerji, satis_yap, panel_sayisi, turbine_sayisi):
     sistem_kalemler   = {**SOLAR_MALIYETI, **(WIND_MALIYETI if turbine_sayisi > 0 else {})}
@@ -480,7 +480,7 @@ def ekonomik_analiz(tuketim, grid_kullanim, fazla_enerji, satis_yap, panel_sayis
 
 
 # ==============================================================
-# BÖLÜM 8: RAPOR
+# CnKGR – RAPOR
 # ==============================================================
 def senaryo_metni(senaryo_no, satis_yap):
     fazla_hedef = "şebekeye satıldı" if satis_yap else "toprağa verildi"
